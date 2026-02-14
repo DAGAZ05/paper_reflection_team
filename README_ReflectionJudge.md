@@ -61,6 +61,10 @@ LLM_MODEL=gpt-4o
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=https://api.openai.com/v1
 
+$env:LLM_MODEL="deepseek/deepseek-chat"
+$env:LLM_BASE_URL="https://api.deepseek.com"
+$env:LLM_API_KEY="你的新key"
+
 # 冲突检测阈值
 CONFLICT_THRESHOLD=0.7
 ```
@@ -72,7 +76,7 @@ CONFLICT_THRESHOLD=0.7
 运行演示，查看冲突裁决的完整流程：
 
 ```bash
-python src/run_reflection_judge.py mode=demo
+python src/run_reflection_judge.py demo
 ```
 
 这将展示两个场景：
@@ -84,7 +88,7 @@ python src/run_reflection_judge.py mode=demo
 启动API服务器：
 
 ```bash
-python src/run_reflection_judge.py mode=server
+python src/run_reflection_judge.py server
 ```
 
 服务器将在 `http://localhost:8000` 启动，可通过以下端点访问：
@@ -98,7 +102,7 @@ python src/run_reflection_judge.py mode=server
 生成模拟的Agent结果数据：
 
 ```bash
-python src/run_reflection_judge.py mode=generate-data
+python src/run_reflection_judge.py generate-data
 ```
 
 ## API使用说明

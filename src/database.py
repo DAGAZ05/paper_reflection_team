@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 class DatabaseClient:
     def __init__(self):
         self.db_config = {
-            "host": os.getenv("DB_HOST", "10.13.1.26"),
-            "port": int(os.getenv("DB_PORT", "5432")),
+            "host": os.getenv("DB_HOST", "frp-bar.com"),
+            "port": int(os.getenv("DB_PORT", "64178")),
             "user": os.getenv("DB_USER", "Guest"),
             "password": os.getenv("DB_PASSWORD", "12345678"),
-            "database": os.getenv("DB_NAME", "thesis_review")
+            "database": os.getenv("DB_NAME", "postgres")
         }
         self.pool = None
 

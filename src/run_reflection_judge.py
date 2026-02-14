@@ -142,6 +142,7 @@ async def run_api_server():
 def main():
     """主函数"""
     import argparse
+    import asyncio
 
     parser = argparse.ArgumentParser(description="反思评估组冲突裁决系统")
     parser.add_argument(
@@ -154,9 +155,13 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "demo":
-        asyncio.run(run_conflict_resolution_demo())
+        if sys.platform.startswith("win"):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            asyncio.run(run_conflict_resolution_demo())
     elif args.mode == "server":
-        asyncio.run(run_api_server())
+        if sys.platform.startswith("win"):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            asyncio.run(run_api_server())
     elif args.mode == "generate-data":
         generator = MockDataGenerator()
 
