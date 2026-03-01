@@ -124,6 +124,105 @@ async def run_conflict_resolution_demo():
         print(f"错误: {str(e)}")
 
 
+async def run_new_format_demo():
+    """运行新格式数据演示"""
+    print("=== 反思评估组新格式数据演示 ===\n")
+
+    from src.conflict_resolver import ConflictResolver
+    from src.mock_data_generator import MockDataGenerator
+    from src.schemas import ConflictResolutionRequest
+
+    # 创建模拟数据生成器
+    generator = MockDataGenerator()
+
+    # 创建冲突裁决器
+    resolver = ConflictResolver()
+
+    # 生成所有组的新格式数据
+    print("--- 生成所有审计组的新格式数据 ---")
+    all_groups_data = generator.generate_all_groups_new_format(with_conflict=True)
+
+    # 合并所有组数据为一个payload（模拟多个组同时提交）
+    combined_payload = {
+        "agent_results": []
+    }
+
+    for group_data in all_groups_data:
+        # 将新格式数据添加到payload中（冲突裁决器会自动转换）
+        combined_payload["agent_results"].append(group_data)
+
+    # 创建请求
+    request_data = {
+        "request_id": f"req_new_format_{len(all_groups_data)}",
+        "metadata": {
+            "paper_id": "paper_new_format_001",
+            "paper_title": "基于Transformer的深度学习模型优化研究"
+        },
+        "payload": combined_payload,
+        "config": {
+            "temperature": 0.3,
+            "max_tokens": 1500,
+            "conflict_threshold": 0.7
+        }
+    }
+
+    print(f"共生成 {len(all_groups_data)} 个审计组的数据")
+    for group_data in all_groups_data:
+        group_id = group_data.get("group_id", 0)
+        audit_results = group_data.get("audit_results", [])
+        print(f"  组{group_id}: {len(audit_results)} 条评审意见")
+
+    # 转换为请求对象
+    request = ConflictResolutionRequest(**request_data)
+
+    # 执行冲突裁决
+    print("\n--- 执行冲突裁决（包含幻觉过滤和加权评分）---")
+    try:
+        response = await resolver.resolve_conflicts(request)
+
+        print("\n裁决结果:")
+        print(f"- 冲突是否已解决: {response.result['conflicts_resolved']}")
+        print(f"- 置信度: {response.result.get('confidence_score', 'N/A')}")
+        print(f"- 证据验证分数: {response.result.get('evidence_validation', {}).get('validation_score', 'N/A'):.2%}")
+
+        if response.result.get('final_verdict'):
+            verdict = response.result['final_verdict']
+            print(f"- 最终结论: {verdict.get('verdict', 'N/A')}")
+            print(f"- 加权平均分: {verdict.get('average_score', 'N/A')}")
+            if verdict.get('original_average_score'):
+                print(f"- 原始平均分: {verdict.get('original_average_score', 'N/A')}")
+            if verdict.get('evidence_validation_score'):
+                print(f"- 证据验证分数: {verdict.get('evidence_validation_score', 'N/A'):.2%}")
+
+        if response.result.get('evidence_validation'):
+            validation = response.result['evidence_validation']
+            print(f"\n证据验证结果:")
+            print(f"  有效引用: {validation.get('valid_count', 0)} / 总引用: {validation.get('total_quotes', 0)}")
+            print(f"  无效引用: {validation.get('invalid_count', 0)}")
+            if validation.get('invalid_count', 0) > 0:
+                print(f"  无效引用详情:")
+                for invalid in validation.get('invalid_results', [])[:3]:
+                    agent = invalid.get('agent_name', '未知')
+                    quote = invalid.get('clean_quote', '')
+                    if len(quote) > 50:
+                        quote = quote[:50] + "..."
+                    print(f"    - {agent}: \"{quote}\"")
+
+        if response.result.get('markdown_report_path'):
+            print(f"\nMarkdown报告已保存: {response.result['markdown_report_path']}")
+
+        # 显示报告摘要
+        if response.result.get('markdown_report'):
+            report_lines = response.result['markdown_report'].split('\n')
+            print("\n--- 报告摘要 (前20行) ---")
+            for line in report_lines[:20]:
+                print(line)
+
+    except Exception as e:
+        logger.error(f"冲突裁决失败: {str(e)}")
+        print(f"错误: {str(e)}")
+
+
 async def run_api_server():
     """启动API服务器"""
     import uvicorn
@@ -147,9 +246,9 @@ def main():
     parser = argparse.ArgumentParser(description="反思评估组冲突裁决系统")
     parser.add_argument(
         "mode",
-        choices=["demo", "server", "generate-data"],
+        choices=["demo", "server", "generate-data", "new-format-demo"],
         default="demo",
-        help="运行模式: demo(演示冲突裁决), server(启动API服务器), generate-data(生成模拟数据)"
+        help="运行模式: demo(演示冲突裁决), server(启动API服务器), generate-data(生成模拟数据), new-format-demo(新格式数据演示)"
     )
 
     args = parser.parse_args()
@@ -158,6 +257,10 @@ def main():
         if sys.platform.startswith("win"):
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
             asyncio.run(run_conflict_resolution_demo())
+    elif args.mode == "new-format-demo":
+        if sys.platform.startswith("win"):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            asyncio.run(run_new_format_demo())
     elif args.mode == "server":
         if sys.platform.startswith("win"):
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -174,6 +277,13 @@ def main():
         no_conflict_json = generator.generate_json_string(generator.generate_agent_results(with_conflict=False))
         print("\n=== 无冲突的Agent结果JSON字符串 ===")
         print(no_conflict_json)
+
+        # 生成新格式数据
+        print("\n=== 新格式数据（组2-6）===")
+        for group_id in range(2, 7):
+            new_format_data = generator.generate_new_format_data(group_id=group_id, num_results=2, with_conflict=(group_id in [4, 5]))
+            print(f"\n组{group_id}数据:")
+            print(json.dumps(new_format_data, ensure_ascii=False, indent=2))
 
         # 生成完整的冲突裁决请求
         conflict_request = generator.generate_conflict_resolution_request()
