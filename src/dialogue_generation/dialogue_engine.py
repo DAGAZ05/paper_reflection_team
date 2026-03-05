@@ -2,9 +2,13 @@ import yaml
 import litellm
 from pathlib import Path
 from typing import List, Dict, Optional
-from .config_c import settings
-from .models import MentorDialogue, PrioritizedIssue
 import logging
+
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.common.config_c import settings
+from src.common.models import MentorDialogue, PrioritizedIssue
 
 logger = logging.getLogger(__name__)
 

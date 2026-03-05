@@ -1,8 +1,12 @@
 from typing import List, Optional, Tuple
 
-from .config_b import EvidenceConfig
-from .models import EvidenceItem, EvidenceSpan, EvidenceValidationResult, Section
-from .utils_b import (
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.common.config_b import EvidenceConfig
+from src.common.models import EvidenceItem, EvidenceSpan, EvidenceValidationResult, Section
+from src.common.utils_b import (
     argmax_topk,
     extract_numbers,
     extract_terms,

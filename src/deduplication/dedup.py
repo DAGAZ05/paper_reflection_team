@@ -1,8 +1,12 @@
 from typing import Dict, List, Tuple
 
-from .config_b import DedupConfig
-from .models import DedupCluster, DedupItem, DedupResult
-from .utils_b import cosine_sim, normalize_text
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.common.config_b import DedupConfig
+from src.common.models import DedupCluster, DedupItem, DedupResult
+from src.common.utils_b import cosine_sim, normalize_text
 
 
 class Deduplicator:

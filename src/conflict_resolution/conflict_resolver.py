@@ -6,9 +6,14 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 
-from .database_a import DatabaseClient
-from .llm_client import LLMClient
-from .models import ConflictResolutionRequest, ConflictResolutionResponse, ConflictType
+# 使用统一的数据库和API模块
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.db.database import db_manager
+from src.api.deepseek_client import deepseek_client
+from src.common.models import ConflictResolutionRequest, ConflictResolutionResponse, ConflictType
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +25,9 @@ LEVEL_PRIORITY = {"Info": 0, "Warning": 1, "Critical": 2}
 
 class ConflictResolver:
     def __init__(self):
-        self.llm_client = LLMClient()
-        self.db_client = DatabaseClient()
+        # 使用统一的DeepSeek客户端和数据库管理器
+        self.llm_client = deepseek_client
+        self.db_client = db_manager
         self.conflict_patterns = self._load_conflict_patterns()
         # 审计组权重配置（根据重要性调整）
         self.agent_weights = {
@@ -539,6 +545,119 @@ class ConflictResolver:
             if (t1 in text1 and t2 in text2) or (t2 in text1 and t1 in text2):
                 return True
         return False
+
+    async def resolve_conflicts_with_llm(
+        self,
+        request: ConflictResolutionRequest,
+        conflict_pairs: List[Dict[str, Any]],
+        paper_context: str
+    ) -> tuple:
+        """使用DeepSeek API进行冲突裁决"""
+        import time
+        start_time = time.time()
+
+        # 构建冲突描述
+        conflict_descriptions = []
+        for pair in conflict_pairs:
+            conflict_descriptions.append(
+                f"- {pair['agent1']} (评分:{pair.get('score1', 'N/A')}, 级别:{pair.get('level1', 'N/A')}) "
+                f"vs {pair['agent2']} (评分:{pair.get('score2', 'N/A')}, 级别:{pair.get('level2', 'N/A')}): "
+                f"'{pair['comment1']}' vs '{pair['comment2']}'"
+            )
+
+        # 构建系统提示词
+        system_prompt = """你是一位资深的学术评审专家，负责裁决不同审计组之间的意见冲突。
+你需要：
+1. 分析冲突的根本原因
+2. 综合考虑证据强度、专业领域、置信度
+3. 给出公正的裁决意见
+4. 返回JSON格式的结果"""
+
+        # 构建用户提示词
+        paper_title = request.metadata.get("paper_title", "Unknown Paper")
+        paper_excerpt = paper_context[:1000] + "..." if len(paper_context) > 1000 else paper_context
+        conflicts_text = "\n".join(conflict_descriptions)
+
+        user_prompt = f"""论文标题: {paper_title}
+
+论文摘要:
+{paper_excerpt}
+
+检测到以下冲突:
+{conflicts_text}
+
+请分析这些冲突并给出裁决意见。返回JSON格式，包含：
+{{
+  "resolved_issues": [
+    {{
+      "agent1_name": "审计组1",
+      "agent2_name": "审计组2",
+      "conflict_type": "冲突类型",
+      "root_cause": "根本原因",
+      "evidence_strength": 0.8,
+      "confidence": 0.85,
+      "resolved_comment": "裁决意见",
+      "resolved_suggestion": "改进建议",
+      "final_level": "Warning",
+      "needs_human_review": false
+    }}
+  ]
+}}"""
+
+        try:
+            # 调用DeepSeek API
+            response = await self.llm_client.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=request.config.get("temperature", 0.3),
+                max_tokens=request.config.get("max_tokens", 2000)
+            )
+
+            # 解析响应
+            content = response["choices"][0]["message"]["content"]
+
+            # 尝试提取JSON
+            import re
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                resolution_data = json.loads(json_match.group())
+            else:
+                resolution_data = json.loads(content)
+
+            usage = {
+                "tokens": response.get("usage", {}).get("total_tokens", 0),
+                "latency_ms": int((time.time() - start_time) * 1000)
+            }
+
+            logger.info(f"LLM冲突裁决完成, tokens={usage['tokens']}, latency={usage['latency_ms']}ms")
+            return resolution_data, usage
+
+        except Exception as e:
+            logger.error(f"LLM调用失败: {e}, 使用降级方案")
+            # 降级方案：简单合并冲突
+            resolved_issues = []
+            for pair in conflict_pairs:
+                resolved_issues.append({
+                    "agent1_name": pair['agent1'],
+                    "agent2_name": pair['agent2'],
+                    "conflict_type": pair.get('conflict_type', 'unknown'),
+                    "root_cause": "LLM调用失败，使用降级方案",
+                    "evidence_strength": 0.5,
+                    "confidence": pair.get('confidence', 0.5),
+                    "resolved_comment": f"检测到{pair['agent1']}和{pair['agent2']}之间的冲突",
+                    "resolved_suggestion": "建议人工复核",
+                    "final_level": "Warning",
+                    "needs_human_review": True
+                })
+
+            return {
+                "resolved_issues": resolved_issues
+            }, {
+                "tokens": 0,
+                "latency_ms": int((time.time() - start_time) * 1000)
+            }
 
     def deduplicate_issues(self, resolved_issues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not resolved_issues:
