@@ -1,0 +1,1247 @@
+{
+  "paper_id": "test_paper_001",
+  "final_score": 68.9,
+  "verdict": "存在关键问题，建议大修后重新提交（Major Revision）",
+  "critical_issues": [
+    {
+      "description": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。论文的核心研究问题不明确是致命缺陷，即使公式对齐等技术细节表现良好，也无法弥补这一根本性缺陷。",
+      "priority": "critical",
+      "agents": [
+        "逻辑审计组",
+        "格式审计组"
+      ],
+      "evidence": "审计维度优先级差异。逻辑审计组关注论文核心逻辑结构（研究问题明确性），而格式审计组关注技术呈现细节（公式对齐）。研究问题明确性是论文质量的根本，属于更高优先级维度。"
+    },
+    {
+      "description": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。引用格式规范是学术写作的基本功，但论文的核心价值在于其提出的问题和解决方案。研究问题不明确是本论文最严重的缺陷。",
+      "priority": "critical",
+      "agents": [
+        "逻辑审计组",
+        "文献真实性组"
+      ],
+      "evidence": "基础规范与核心逻辑的冲突。文献真实性组关注引用格式的规范性（基础要求），逻辑审计组关注论文立论的基础（核心逻辑）。规范的引用是必要条件，但无法替代清晰的研究问题。"
+    },
+    {
+      "description": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。图表数据一致性是良好实践，但属于执行层面。论文缺乏清晰的研究问题导向，导致实验数据的意义和目标模糊。",
+      "priority": "critical",
+      "agents": [
+        "逻辑审计组",
+        "实验数据组"
+      ],
+      "evidence": "内容与形式脱节。实验数据组确认了图表内部数据的一致性（形式正确），但逻辑审计组指出论文缺乏明确的研究问题（内容缺失）。一致的数据若服务于不明确的目标，其价值存疑。"
+    },
+    {
+      "description": "支持代码审计组的“代码规范性：致命错误”判断。如果论文包含可复现的研究（尤其涉及算法或实验），混乱或错误的代码会直接导致研究结果不可信，其严重性高于公式对齐等排版问题。",
+      "priority": "critical",
+      "agents": [
+        "代码审计组",
+        "格式审计组"
+      ],
+      "evidence": "不同技术模块的质量割裂。论文在数学公式呈现（格式组）上表现良好，但在附带的或用于验证的代码（代码组）规范性上存在致命错误。对于依赖代码复现结果的论文，代码质量至关重要。"
+    }
+  ],
+  "major_issues": [],
+  "minor_issues": [],
+  "needs_human_review": true,
+  "human_review_reason": "置信度0.65低于阈值0.7; 置信度0.6低于阈值0.7; 置信度0.4低于阈值0.7",
+  "mentor_dialogue": {
+    "role": "导师",
+    "field": "软件工程",
+    "conversation": [
+      {
+        "role": "mentor",
+        "content": "同学你好，请坐。\n\n我仔细审阅了你的论文初稿和逻辑审计组的反馈。我们直接进入正题。\n\n### 1. 总体评价\n\n首先，我必须肯定你在技术执行层面的努力。论文中的公式推导、算法对齐以及部分图表的呈现，显示出你具备扎实的技术功底和严谨的细节处理能力。这些都是优秀研究工作的良好基础。\n\n然而，逻辑审计组指出的核心问题——“研究问题明确性存在关键缺陷”——是**根本性且致命的**。这并非对你个人能力的否定，而是当前论文版本在**学术叙事逻辑**上出现了结构性偏差。一篇学术论文的本质，是讲述一个“我们发现了什么知识缺口，以及我们如何填补它”的故事。如果故事的开头（研究问题）不清晰，那么后续所有的技术演绎、实验数据，都会失去目标和意义，变得像没有地图的航行。审计组的三条“critical”意见，其实是从不同角度反复强调了同一个核心症结。\n\n### 2. 具体问题分析与修改建议\n\n我们逐一拆解，并思考如何修正：\n\n**问题本质：** 你的论文目前呈现出“**解决方案驱动**”或“**技术展示驱动**”的倾向。你很可能先有了一个不错的技术思路或模型，然后试图围绕它构建论文。这导致论文的“引言”和“问题陈述”部分是在为你的技术方案寻找场景和理由，而非从一个客观存在的、未被充分解决的**研究问题**出发。\n\n**这带来的直接后果是：**\n- **目标模糊：** 读者（包括评审人）会困惑：“这项研究究竟要解决软件工程领域的哪个具体、重要的问题？”\n- **贡献不清：** 你的技术改进（公式、模型）是针对什么基准的改进？解决了前人方案的哪些局限性？\n- **实验意义缺失：** 正如审计组所说，你的实验数据想证明什么？是证明你的技术可行，还是证明它**有效地解决了一个明确的问题**？两者有本质区别。\n\n**修改建议（请按此顺序重构论文核心）：**\n\n1.  **彻底重思“研究问题”：** 暂时忘掉你的技术方案。请你用一句话回答：“在[你的研究领域，如软件缺陷预测、代码克隆检测等]中，当前学术界或工业界面临的、尚未被已有工作很好解决的**关键挑战**是什么？” 这句话的答案，就是你的研究问题的雏形。\n2.  **采用“问题-动机-贡献”框架重写引言：**\n    - **第一段（背景与重要性）：** 清晰界定你的研究领域及其现实意义。\n    - **第二段（现有工作与局限）：** 综述最相关的2-3类现有方法，并**明确指出它们共同的或关键的局限性**。这部分必须客观、有文献支撑。\n    - **第三段（本文研究问题）：** 基于上述局限性，**正式地、用“RQ: ...”的格式提出1-3个具体、可验证的研究问题**。例如：“RQ1: 如何克服在XX场景下，现有方法对XX特征不敏感的问题？”\n    - **第四段（本文贡献与路线图）：** 此时，才引出你的解决方案将如何针对性地回答上述研究问题，并列出2-4条具体贡献。\n3.  **让全文服务于研究问题：**\n    - **文献综述：** 围绕你的研究问题组织，目的是为了凸显“知识缺口”。\n    - **方法设计：** 在描述每个技术组件时，都应点明它是为了应对RQ中的哪个子挑战。\n    - **实验设计：** 实验的对比基线、评估指标、实验设置，都必须直接对应于验证你的研究问题。在实验分析部分，要不断回扣到：“这个结果说明我们解决了RQ1中提到的XX问题。”\n    - **结论：** 首先总结你的研究**回答了哪些问题**，然后才是基于答案的贡献。\n\n**关于审计组提到的其他点：** 引用格式、数据一致性这些“基本功”问题，在你重构了论文主线后，顺带仔细检查修正即可。它们重要，但优先级次于解决主线逻辑问题。\n\n### 3. 鼓励性结尾\n\n我理解这个重构过程会非常痛苦，感觉像推倒重来。但请相信，这是每一位严谨的研究者都必须经历的“炼狱”阶段。你拥有的技术细节和实验数据不是废料，而是宝贵的“建筑材料”。现在你需要做的，是绘制一张更清晰、更坚实的“建筑设计图”（即明确的研究问题），然后把这些材料重新构筑成一座目标明确、结构稳固的大厦。\n\n你具备完成优秀研究的技术能力，现在需要补上的是**提出和定义问题的思维训练**。这正是科研工作的核心魅力所在。不要气馁，把这次修改看作是一次学术能力升级的关键机会。我期待看到你以清晰的研究问题为导向的新一版论文。过程中有任何卡点，随时来找我讨论。\n\n加油，你能处理好。"
+      }
+    ],
+    "quality_score": 4.5
+  },
+  "plugin_metadata": {
+    "paper_title": "Paper_test_paper_001",
+    "conflict_resolution": {
+      "resolved_issues": [
+        {
+          "agent1_name": "逻辑审计组",
+          "agent2_name": "格式审计组",
+          "conflict_type": "研究问题明确性 vs 公式对齐",
+          "root_cause": "审计维度优先级差异。逻辑审计组关注论文核心逻辑结构（研究问题明确性），而格式审计组关注技术呈现细节（公式对齐）。研究问题明确性是论文质量的根本，属于更高优先级维度。",
+          "evidence_strength": 0.9,
+          "confidence": 0.95,
+          "resolved_comment": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。论文的核心研究问题不明确是致命缺陷，即使公式对齐等技术细节表现良好，也无法弥补这一根本性缺陷。",
+          "resolved_suggestion": "作者必须首先明确并清晰地阐述研究问题、研究目标和研究贡献，这是论文修改的首要任务。",
+          "final_level": "Critical",
+          "needs_human_review": false
+        },
+        {
+          "agent1_name": "逻辑审计组",
+          "agent2_name": "文献真实性组",
+          "conflict_type": "研究问题明确性 vs 引用格式规范",
+          "root_cause": "基础规范与核心逻辑的冲突。文献真实性组关注引用格式的规范性（基础要求），逻辑审计组关注论文立论的基础（核心逻辑）。规范的引用是必要条件，但无法替代清晰的研究问题。",
+          "evidence_strength": 0.9,
+          "confidence": 0.95,
+          "resolved_comment": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。引用格式规范是学术写作的基本功，但论文的核心价值在于其提出的问题和解决方案。研究问题不明确是本论文最严重的缺陷。",
+          "resolved_suggestion": "在保持引用规范的同时，必须从根本上重构引言和问题陈述部分，明确界定研究空白、研究问题和预期贡献。",
+          "final_level": "Critical",
+          "needs_human_review": false
+        },
+        {
+          "agent1_name": "逻辑审计组",
+          "agent2_name": "实验数据组",
+          "conflict_type": "研究问题明确性 vs 图表数据一致性",
+          "root_cause": "内容与形式脱节。实验数据组确认了图表内部数据的一致性（形式正确），但逻辑审计组指出论文缺乏明确的研究问题（内容缺失）。一致的数据若服务于不明确的目标，其价值存疑。",
+          "evidence_strength": 0.85,
+          "confidence": 0.9,
+          "resolved_comment": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。图表数据一致性是良好实践，但属于执行层面。论文缺乏清晰的研究问题导向，导致实验数据的意义和目标模糊。",
+          "resolved_suggestion": "在修改研究问题后，需重新审视实验设计和图表，确保其直接、有力地服务于已明确的研究问题。",
+          "final_level": "Critical",
+          "needs_human_review": false
+        },
+        {
+          "agent1_name": "代码审计组",
+          "agent2_name": "格式审计组",
+          "conflict_type": "代码规范性 vs 公式对齐",
+          "root_cause": "不同技术模块的质量割裂。论文在数学公式呈现（格式组）上表现良好，但在附带的或用于验证的代码（代码组）规范性上存在致命错误。对于依赖代码复现结果的论文，代码质量至关重要。",
+          "evidence_strength": 0.8,
+          "confidence": 0.85,
+          "resolved_comment": "支持代码审计组的“代码规范性：致命错误”判断。如果论文包含可复现的研究（尤其涉及算法或实验），混乱或错误的代码会直接导致研究结果不可信，其严重性高于公式对齐等排版问题。",
+          "resolved_suggestion": "必须按照代码规范（如PEP8 for Python）彻底重构代码，增加注释，确保可读性和可复现性。公式对齐良好应保持。",
+          "final_level": "Critical",
+          "needs_human_review": false
+        }
+      ],
+      "conflicts_resolved": true,
+      "confidence_score": 0.5,
+      "final_verdict": {
+        "average_score": 68.9,
+        "original_average_score": 75.9,
+        "level_distribution": {
+          "Info": 0,
+          "Warning": 0,
+          "Critical": 4
+        },
+        "verdict": "存在关键问题，建议大修后重新提交（Major Revision）",
+        "total_conflicts": 4,
+        "needs_human_review_count": 0,
+        "score_adjusted_by_evidence": true,
+        "evidence_validation_score": 0.0
+      },
+      "tags": [
+        "Executive_Summary",
+        "Critical_Fix_List",
+        "Score_Calibration"
+      ],
+      "evidence_validation": {
+        "valid_count": 0,
+        "invalid_count": 0,
+        "invalid_results": [],
+        "validation_score": 0.0,
+        "message": "论文内容为空，无法验证证据"
+      },
+      "evidence_enforcement": {
+        "filtered_agent_results": [
+          {
+            "request_id": "req_2_0",
+            "agent_info": {
+              "name": "格式审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 65,
+              "audit_level": "Warning",
+              "comment": "标题层级规范: 需要注意：标题层级规范",
+              "suggestion": "建议优化标题层级规范",
+              "tags": [],
+              "point": "标题层级规范",
+              "description": "需要注意：标题层级规范",
+              "evidence_quote": "原文第7.3节提到：'标题层级规范相关内容...'",
+              "location": {
+                "section": "10.1",
+                "line_start": 282
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_2_1",
+            "agent_info": {
+              "name": "格式审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 60,
+              "audit_level": "Critical",
+              "comment": "图表位置: 发现严重问题：图表位置",
+              "suggestion": "强烈建议重新审查图表位置",
+              "tags": [],
+              "point": "图表位置",
+              "description": "发现严重问题：图表位置",
+              "evidence_quote": "原文第7.2节提到：'图表位置相关内容...'",
+              "location": {
+                "section": "1.1",
+                "line_start": 212
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_2_2",
+            "agent_info": {
+              "name": "格式审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 94,
+              "audit_level": "Info",
+              "comment": "公式对齐: 表现良好：公式对齐",
+              "suggestion": "可以进一步提升公式对齐",
+              "tags": [],
+              "point": "公式对齐",
+              "description": "表现良好：公式对齐",
+              "evidence_quote": "原文第2.4节提到：'公式对齐相关内容...'",
+              "location": {
+                "section": "10.2",
+                "line_start": 168
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_2_3",
+            "agent_info": {
+              "name": "格式审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 71,
+              "audit_level": "Warning",
+              "comment": "参考文献格式: 建议改进：参考文献格式",
+              "suggestion": "建议优化参考文献格式",
+              "tags": [],
+              "point": "参考文献格式",
+              "description": "建议改进：参考文献格式",
+              "evidence_quote": "原文第8.5节提到：'参考文献格式相关内容...'",
+              "location": {
+                "section": "7.1",
+                "line_start": 315
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_3_0",
+            "agent_info": {
+              "name": "逻辑审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 81,
+              "audit_level": "Info",
+              "comment": "章节衔接: 表现良好：章节衔接",
+              "suggestion": "继续保持",
+              "tags": [],
+              "point": "章节衔接",
+              "description": "表现良好：章节衔接",
+              "evidence_quote": "原文第1.2节提到：'章节衔接相关内容...'",
+              "location": {
+                "section": "10.4",
+                "line_start": 387
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_3_1",
+            "agent_info": {
+              "name": "逻辑审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 84,
+              "audit_level": "Info",
+              "comment": "章节衔接: 表现良好：章节衔接",
+              "suggestion": "保持当前水平",
+              "tags": [],
+              "point": "章节衔接",
+              "description": "表现良好：章节衔接",
+              "evidence_quote": "原文第1.2节提到：'章节衔接相关内容...'",
+              "location": {
+                "section": "4.2",
+                "line_start": 231
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_3_2",
+            "agent_info": {
+              "name": "逻辑审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 92,
+              "audit_level": "Info",
+              "comment": "摘要与结论一致性: 表现良好：摘要与结论一致性",
+              "suggestion": "继续保持",
+              "tags": [],
+              "point": "摘要与结论一致性",
+              "description": "表现良好：摘要与结论一致性",
+              "evidence_quote": "原文第5.3节提到：'摘要与结论一致性相关内容...'",
+              "location": {
+                "section": "10.4",
+                "line_start": 256
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_3_3",
+            "agent_info": {
+              "name": "逻辑审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 40,
+              "audit_level": "Critical",
+              "comment": "研究问题明确性: 存在关键缺陷：研究问题明确性",
+              "suggestion": "需要彻底修改研究问题明确性",
+              "tags": [],
+              "point": "研究问题明确性",
+              "description": "存在关键缺陷：研究问题明确性",
+              "evidence_quote": "原文第5.2节提到：'研究问题明确性相关内容...'",
+              "location": {
+                "section": "4.1",
+                "line_start": 232
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_4_0",
+            "agent_info": {
+              "name": "代码审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 85,
+              "audit_level": "Info",
+              "comment": "依赖管理: 符合规范：依赖管理",
+              "suggestion": "可以进一步提升依赖管理",
+              "tags": [],
+              "point": "依赖管理",
+              "description": "符合规范：依赖管理",
+              "evidence_quote": "原文第6.5节提到：'依赖管理相关内容...'",
+              "location": {
+                "section": "1.3",
+                "line_start": 119
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_4_1",
+            "agent_info": {
+              "name": "代码审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 81,
+              "audit_level": "Info",
+              "comment": "代码与描述一致性: 表现良好：代码与描述一致性",
+              "suggestion": "可以进一步提升代码与描述一致性",
+              "tags": [],
+              "point": "代码与描述一致性",
+              "description": "表现良好：代码与描述一致性",
+              "evidence_quote": "原文第1.1节提到：'代码与描述一致性相关内容...'",
+              "location": {
+                "section": "5.5",
+                "line_start": 21
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_4_2",
+            "agent_info": {
+              "name": "代码审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 55,
+              "audit_level": "Critical",
+              "comment": "代码规范性: 致命错误：代码规范性",
+              "suggestion": "需要彻底修改代码规范性",
+              "tags": [],
+              "point": "代码规范性",
+              "description": "致命错误：代码规范性",
+              "evidence_quote": "原文第3.3节提到：'代码规范性相关内容...'",
+              "location": {
+                "section": "5.3",
+                "line_start": 404
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_4_3",
+            "agent_info": {
+              "name": "代码审计组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 88,
+              "audit_level": "Info",
+              "comment": "README完整性: 基本合格：README完整性",
+              "suggestion": "继续保持",
+              "tags": [],
+              "point": "README完整性",
+              "description": "基本合格：README完整性",
+              "evidence_quote": "原文第8.3节提到：'README完整性相关内容...'",
+              "location": {
+                "section": "2.5",
+                "line_start": 408
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_5_0",
+            "agent_info": {
+              "name": "实验数据组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 83,
+              "audit_level": "Info",
+              "comment": "统计学显著性检验: 基本合格：统计学显著性检验",
+              "suggestion": "继续保持",
+              "tags": [],
+              "point": "统计学显著性检验",
+              "description": "基本合格：统计学显著性检验",
+              "evidence_quote": "原文第8.1节提到：'统计学显著性检验相关内容...'",
+              "location": {
+                "section": "8.4",
+                "line_start": 485
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_5_1",
+            "agent_info": {
+              "name": "实验数据组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 62,
+              "audit_level": "Warning",
+              "comment": "数据分布合理性: 建议改进：数据分布合理性",
+              "suggestion": "建议完善数据分布合理性",
+              "tags": [],
+              "point": "数据分布合理性",
+              "description": "建议改进：数据分布合理性",
+              "evidence_quote": "原文第7.1节提到：'数据分布合理性相关内容...'",
+              "location": {
+                "section": "7.2",
+                "line_start": 57
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_5_2",
+            "agent_info": {
+              "name": "实验数据组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 92,
+              "audit_level": "Info",
+              "comment": "图表数据一致性: 符合规范：图表数据一致性",
+              "suggestion": "继续保持",
+              "tags": [],
+              "point": "图表数据一致性",
+              "description": "符合规范：图表数据一致性",
+              "evidence_quote": "原文第3.5节提到：'图表数据一致性相关内容...'",
+              "location": {
+                "section": "10.2",
+                "line_start": 341
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_5_3",
+            "agent_info": {
+              "name": "实验数据组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 74,
+              "audit_level": "Warning",
+              "comment": "统计学显著性检验: 建议改进：统计学显著性检验",
+              "suggestion": "建议完善统计学显著性检验",
+              "tags": [],
+              "point": "统计学显著性检验",
+              "description": "建议改进：统计学显著性检验",
+              "evidence_quote": "原文第7.2节提到：'统计学显著性检验相关内容...'",
+              "location": {
+                "section": "2.2",
+                "line_start": 401
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_6_0",
+            "agent_info": {
+              "name": "文献真实性组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 60,
+              "audit_level": "Critical",
+              "comment": "文献年份合理性: 发现严重问题：文献年份合理性",
+              "suggestion": "必须立即修正文献年份合理性",
+              "tags": [],
+              "point": "文献年份合理性",
+              "description": "发现严重问题：文献年份合理性",
+              "evidence_quote": "原文第7.1节提到：'文献年份合理性相关内容...'",
+              "location": {
+                "section": "6.5",
+                "line_start": 215
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_6_1",
+            "agent_info": {
+              "name": "文献真实性组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 87,
+              "audit_level": "Info",
+              "comment": "作者信息完整性: 符合规范：作者信息完整性",
+              "suggestion": "保持当前水平",
+              "tags": [],
+              "point": "作者信息完整性",
+              "description": "符合规范：作者信息完整性",
+              "evidence_quote": "原文第8.4节提到：'作者信息完整性相关内容...'",
+              "location": {
+                "section": "4.3",
+                "line_start": 435
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_6_2",
+            "agent_info": {
+              "name": "文献真实性组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 92,
+              "audit_level": "Info",
+              "comment": "引用格式规范: 基本合格：引用格式规范",
+              "suggestion": "保持当前水平",
+              "tags": [],
+              "point": "引用格式规范",
+              "description": "基本合格：引用格式规范",
+              "evidence_quote": "原文第3.2节提到：'引用格式规范相关内容...'",
+              "location": {
+                "section": "2.5",
+                "line_start": 295
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          },
+          {
+            "request_id": "req_6_3",
+            "agent_info": {
+              "name": "文献真实性组",
+              "version": "v1.0"
+            },
+            "result": {
+              "score": 70,
+              "audit_level": "Warning",
+              "comment": "参考文献真实性: 需要注意：参考文献真实性",
+              "suggestion": "建议补充参考文献真实性",
+              "tags": [],
+              "point": "参考文献真实性",
+              "description": "需要注意：参考文献真实性",
+              "evidence_quote": "原文第8.3节提到：'参考文献真实性相关内容...'",
+              "location": {
+                "section": "10.2",
+                "line_start": 172
+              }
+            },
+            "usage": {
+              "tokens": 0,
+              "latency_ms": 0
+            }
+          }
+        ],
+        "removed_results": [],
+        "removed_count": 0,
+        "original_count": 20,
+        "remaining_count": 20,
+        "paper_context_available": false
+      },
+      "markdown_report": "# 论文评审冲突裁决报告\n\n**论文标题**: Paper_test_paper_001\n**综合得分**: 68.9\n**裁决置信度**: 0.50\n**最终结论**: 存在关键问题，建议大修后重新提交（Major Revision）\n\n---\n\n## 一、总体评价\n\n本次评审共检测到 **4** 个冲突，其中 Critical 4 个、Warning 0 个、Info 0 个。\n\n## 二、证据真实性验证\n\n系统对评审意见中的证据引用进行了真实性验证：\n- **验证结果**: 0 个有效引用 / 0 个总引用\n- **验证分数**: 0.0%\n- **所有证据引用均通过验证**\n\n## 三、冲突裁决详情\n\n### 1. [!] 研究问题明确性 vs 公式对齐 (Critical)\n\n- **冲突双方**: 逻辑审计组 vs 格式审计组\n- **根本原因**: 审计维度优先级差异。逻辑审计组关注论文核心逻辑结构（研究问题明确性），而格式审计组关注技术呈现细节（公式对齐）。研究问题明确性是论文质量的根本，属于更高优先级维度。\n- **裁决意见**: 支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。论文的核心研究问题不明确是致命缺陷，即使公式对齐等技术细节表现良好，也无法弥补这一根本性缺陷。\n- **改进建议**: 作者必须首先明确并清晰地阐述研究问题、研究目标和研究贡献，这是论文修改的首要任务。\n\n### 2. [!] 研究问题明确性 vs 引用格式规范 (Critical)\n\n- **冲突双方**: 逻辑审计组 vs 文献真实性组\n- **根本原因**: 基础规范与核心逻辑的冲突。文献真实性组关注引用格式的规范性（基础要求），逻辑审计组关注论文立论的基础（核心逻辑）。规范的引用是必要条件，但无法替代清晰的研究问题。\n- **裁决意见**: 支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。引用格式规范是学术写作的基本功，但论文的核心价值在于其提出的问题和解决方案。研究问题不明确是本论文最严重的缺陷。\n- **改进建议**: 在保持引用规范的同时，必须从根本上重构引言和问题陈述部分，明确界定研究空白、研究问题和预期贡献。\n\n### 3. [!] 研究问题明确性 vs 图表数据一致性 (Critical)\n\n- **冲突双方**: 逻辑审计组 vs 实验数据组\n- **根本原因**: 内容与形式脱节。实验数据组确认了图表内部数据的一致性（形式正确），但逻辑审计组指出论文缺乏明确的研究问题（内容缺失）。一致的数据若服务于不明确的目标，其价值存疑。\n- **裁决意见**: 支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。图表数据一致性是良好实践，但属于执行层面。论文缺乏清晰的研究问题导向，导致实验数据的意义和目标模糊。\n- **改进建议**: 在修改研究问题后，需重新审视实验设计和图表，确保其直接、有力地服务于已明确的研究问题。\n\n### 4. [!] 代码规范性 vs 公式对齐 (Critical)\n\n- **冲突双方**: 代码审计组 vs 格式审计组\n- **根本原因**: 不同技术模块的质量割裂。论文在数学公式呈现（格式组）上表现良好，但在附带的或用于验证的代码（代码组）规范性上存在致命错误。对于依赖代码复现结果的论文，代码质量至关重要。\n- **裁决意见**: 支持代码审计组的“代码规范性：致命错误”判断。如果论文包含可复现的研究（尤其涉及算法或实验），混乱或错误的代码会直接导致研究结果不可信，其严重性高于公式对齐等排版问题。\n- **改进建议**: 必须按照代码规范（如PEP8 for Python）彻底重构代码，增加注释，确保可读性和可复现性。公式对齐良好应保持。\n\n## 四、最终建议\n\n存在关键问题，建议大修后重新提交（Major Revision）\n\n---\n*由 ReflectionJudge_ConflictResolver v1.0 自动生成*",
+      "markdown_report_path": "reports\\report_Paper_test_paper_001_20260306_215515.md",
+      "paper_id": "test_paper_001",
+      "result_json": {
+        "conflicts_resolved": true,
+        "resolved_issues": [
+          {
+            "agent1_name": "逻辑审计组",
+            "agent2_name": "格式审计组",
+            "conflict_type": "研究问题明确性 vs 公式对齐",
+            "root_cause": "审计维度优先级差异。逻辑审计组关注论文核心逻辑结构（研究问题明确性），而格式审计组关注技术呈现细节（公式对齐）。研究问题明确性是论文质量的根本，属于更高优先级维度。",
+            "evidence_strength": 0.9,
+            "confidence": 0.95,
+            "resolved_comment": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。论文的核心研究问题不明确是致命缺陷，即使公式对齐等技术细节表现良好，也无法弥补这一根本性缺陷。",
+            "resolved_suggestion": "作者必须首先明确并清晰地阐述研究问题、研究目标和研究贡献，这是论文修改的首要任务。",
+            "final_level": "Critical",
+            "needs_human_review": false
+          },
+          {
+            "agent1_name": "逻辑审计组",
+            "agent2_name": "文献真实性组",
+            "conflict_type": "研究问题明确性 vs 引用格式规范",
+            "root_cause": "基础规范与核心逻辑的冲突。文献真实性组关注引用格式的规范性（基础要求），逻辑审计组关注论文立论的基础（核心逻辑）。规范的引用是必要条件，但无法替代清晰的研究问题。",
+            "evidence_strength": 0.9,
+            "confidence": 0.95,
+            "resolved_comment": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。引用格式规范是学术写作的基本功，但论文的核心价值在于其提出的问题和解决方案。研究问题不明确是本论文最严重的缺陷。",
+            "resolved_suggestion": "在保持引用规范的同时，必须从根本上重构引言和问题陈述部分，明确界定研究空白、研究问题和预期贡献。",
+            "final_level": "Critical",
+            "needs_human_review": false
+          },
+          {
+            "agent1_name": "逻辑审计组",
+            "agent2_name": "实验数据组",
+            "conflict_type": "研究问题明确性 vs 图表数据一致性",
+            "root_cause": "内容与形式脱节。实验数据组确认了图表内部数据的一致性（形式正确），但逻辑审计组指出论文缺乏明确的研究问题（内容缺失）。一致的数据若服务于不明确的目标，其价值存疑。",
+            "evidence_strength": 0.85,
+            "confidence": 0.9,
+            "resolved_comment": "支持逻辑审计组的“研究问题明确性：存在关键缺陷”判断。图表数据一致性是良好实践，但属于执行层面。论文缺乏清晰的研究问题导向，导致实验数据的意义和目标模糊。",
+            "resolved_suggestion": "在修改研究问题后，需重新审视实验设计和图表，确保其直接、有力地服务于已明确的研究问题。",
+            "final_level": "Critical",
+            "needs_human_review": false
+          },
+          {
+            "agent1_name": "代码审计组",
+            "agent2_name": "格式审计组",
+            "conflict_type": "代码规范性 vs 公式对齐",
+            "root_cause": "不同技术模块的质量割裂。论文在数学公式呈现（格式组）上表现良好，但在附带的或用于验证的代码（代码组）规范性上存在致命错误。对于依赖代码复现结果的论文，代码质量至关重要。",
+            "evidence_strength": 0.8,
+            "confidence": 0.85,
+            "resolved_comment": "支持代码审计组的“代码规范性：致命错误”判断。如果论文包含可复现的研究（尤其涉及算法或实验），混乱或错误的代码会直接导致研究结果不可信，其严重性高于公式对齐等排版问题。",
+            "resolved_suggestion": "必须按照代码规范（如PEP8 for Python）彻底重构代码，增加注释，确保可读性和可复现性。公式对齐良好应保持。",
+            "final_level": "Critical",
+            "needs_human_review": false
+          }
+        ],
+        "confidence_score": 0.5,
+        "tags": [
+          "Executive_Summary",
+          "Critical_Fix_List",
+          "Score_Calibration"
+        ],
+        "final_verdict": {
+          "average_score": 68.9,
+          "original_average_score": 75.9,
+          "level_distribution": {
+            "Info": 0,
+            "Warning": 0,
+            "Critical": 4
+          },
+          "verdict": "存在关键问题，建议大修后重新提交（Major Revision）",
+          "total_conflicts": 4,
+          "needs_human_review_count": 0,
+          "score_adjusted_by_evidence": true,
+          "evidence_validation_score": 0.0
+        },
+        "paper_id": "test_paper_001",
+        "evidence_validation": {
+          "valid_count": 0,
+          "invalid_count": 0,
+          "invalid_results": [],
+          "validation_score": 0.0,
+          "message": "论文内容为空，无法验证证据"
+        },
+        "evidence_enforcement": {
+          "filtered_agent_results": [
+            {
+              "request_id": "req_2_0",
+              "agent_info": {
+                "name": "格式审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 65,
+                "audit_level": "Warning",
+                "comment": "标题层级规范: 需要注意：标题层级规范",
+                "suggestion": "建议优化标题层级规范",
+                "tags": [],
+                "point": "标题层级规范",
+                "description": "需要注意：标题层级规范",
+                "evidence_quote": "原文第7.3节提到：'标题层级规范相关内容...'",
+                "location": {
+                  "section": "10.1",
+                  "line_start": 282
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_2_1",
+              "agent_info": {
+                "name": "格式审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 60,
+                "audit_level": "Critical",
+                "comment": "图表位置: 发现严重问题：图表位置",
+                "suggestion": "强烈建议重新审查图表位置",
+                "tags": [],
+                "point": "图表位置",
+                "description": "发现严重问题：图表位置",
+                "evidence_quote": "原文第7.2节提到：'图表位置相关内容...'",
+                "location": {
+                  "section": "1.1",
+                  "line_start": 212
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_2_2",
+              "agent_info": {
+                "name": "格式审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 94,
+                "audit_level": "Info",
+                "comment": "公式对齐: 表现良好：公式对齐",
+                "suggestion": "可以进一步提升公式对齐",
+                "tags": [],
+                "point": "公式对齐",
+                "description": "表现良好：公式对齐",
+                "evidence_quote": "原文第2.4节提到：'公式对齐相关内容...'",
+                "location": {
+                  "section": "10.2",
+                  "line_start": 168
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_2_3",
+              "agent_info": {
+                "name": "格式审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 71,
+                "audit_level": "Warning",
+                "comment": "参考文献格式: 建议改进：参考文献格式",
+                "suggestion": "建议优化参考文献格式",
+                "tags": [],
+                "point": "参考文献格式",
+                "description": "建议改进：参考文献格式",
+                "evidence_quote": "原文第8.5节提到：'参考文献格式相关内容...'",
+                "location": {
+                  "section": "7.1",
+                  "line_start": 315
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_3_0",
+              "agent_info": {
+                "name": "逻辑审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 81,
+                "audit_level": "Info",
+                "comment": "章节衔接: 表现良好：章节衔接",
+                "suggestion": "继续保持",
+                "tags": [],
+                "point": "章节衔接",
+                "description": "表现良好：章节衔接",
+                "evidence_quote": "原文第1.2节提到：'章节衔接相关内容...'",
+                "location": {
+                  "section": "10.4",
+                  "line_start": 387
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_3_1",
+              "agent_info": {
+                "name": "逻辑审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 84,
+                "audit_level": "Info",
+                "comment": "章节衔接: 表现良好：章节衔接",
+                "suggestion": "保持当前水平",
+                "tags": [],
+                "point": "章节衔接",
+                "description": "表现良好：章节衔接",
+                "evidence_quote": "原文第1.2节提到：'章节衔接相关内容...'",
+                "location": {
+                  "section": "4.2",
+                  "line_start": 231
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_3_2",
+              "agent_info": {
+                "name": "逻辑审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 92,
+                "audit_level": "Info",
+                "comment": "摘要与结论一致性: 表现良好：摘要与结论一致性",
+                "suggestion": "继续保持",
+                "tags": [],
+                "point": "摘要与结论一致性",
+                "description": "表现良好：摘要与结论一致性",
+                "evidence_quote": "原文第5.3节提到：'摘要与结论一致性相关内容...'",
+                "location": {
+                  "section": "10.4",
+                  "line_start": 256
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_3_3",
+              "agent_info": {
+                "name": "逻辑审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 40,
+                "audit_level": "Critical",
+                "comment": "研究问题明确性: 存在关键缺陷：研究问题明确性",
+                "suggestion": "需要彻底修改研究问题明确性",
+                "tags": [],
+                "point": "研究问题明确性",
+                "description": "存在关键缺陷：研究问题明确性",
+                "evidence_quote": "原文第5.2节提到：'研究问题明确性相关内容...'",
+                "location": {
+                  "section": "4.1",
+                  "line_start": 232
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_4_0",
+              "agent_info": {
+                "name": "代码审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 85,
+                "audit_level": "Info",
+                "comment": "依赖管理: 符合规范：依赖管理",
+                "suggestion": "可以进一步提升依赖管理",
+                "tags": [],
+                "point": "依赖管理",
+                "description": "符合规范：依赖管理",
+                "evidence_quote": "原文第6.5节提到：'依赖管理相关内容...'",
+                "location": {
+                  "section": "1.3",
+                  "line_start": 119
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_4_1",
+              "agent_info": {
+                "name": "代码审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 81,
+                "audit_level": "Info",
+                "comment": "代码与描述一致性: 表现良好：代码与描述一致性",
+                "suggestion": "可以进一步提升代码与描述一致性",
+                "tags": [],
+                "point": "代码与描述一致性",
+                "description": "表现良好：代码与描述一致性",
+                "evidence_quote": "原文第1.1节提到：'代码与描述一致性相关内容...'",
+                "location": {
+                  "section": "5.5",
+                  "line_start": 21
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_4_2",
+              "agent_info": {
+                "name": "代码审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 55,
+                "audit_level": "Critical",
+                "comment": "代码规范性: 致命错误：代码规范性",
+                "suggestion": "需要彻底修改代码规范性",
+                "tags": [],
+                "point": "代码规范性",
+                "description": "致命错误：代码规范性",
+                "evidence_quote": "原文第3.3节提到：'代码规范性相关内容...'",
+                "location": {
+                  "section": "5.3",
+                  "line_start": 404
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_4_3",
+              "agent_info": {
+                "name": "代码审计组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 88,
+                "audit_level": "Info",
+                "comment": "README完整性: 基本合格：README完整性",
+                "suggestion": "继续保持",
+                "tags": [],
+                "point": "README完整性",
+                "description": "基本合格：README完整性",
+                "evidence_quote": "原文第8.3节提到：'README完整性相关内容...'",
+                "location": {
+                  "section": "2.5",
+                  "line_start": 408
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_5_0",
+              "agent_info": {
+                "name": "实验数据组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 83,
+                "audit_level": "Info",
+                "comment": "统计学显著性检验: 基本合格：统计学显著性检验",
+                "suggestion": "继续保持",
+                "tags": [],
+                "point": "统计学显著性检验",
+                "description": "基本合格：统计学显著性检验",
+                "evidence_quote": "原文第8.1节提到：'统计学显著性检验相关内容...'",
+                "location": {
+                  "section": "8.4",
+                  "line_start": 485
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_5_1",
+              "agent_info": {
+                "name": "实验数据组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 62,
+                "audit_level": "Warning",
+                "comment": "数据分布合理性: 建议改进：数据分布合理性",
+                "suggestion": "建议完善数据分布合理性",
+                "tags": [],
+                "point": "数据分布合理性",
+                "description": "建议改进：数据分布合理性",
+                "evidence_quote": "原文第7.1节提到：'数据分布合理性相关内容...'",
+                "location": {
+                  "section": "7.2",
+                  "line_start": 57
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_5_2",
+              "agent_info": {
+                "name": "实验数据组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 92,
+                "audit_level": "Info",
+                "comment": "图表数据一致性: 符合规范：图表数据一致性",
+                "suggestion": "继续保持",
+                "tags": [],
+                "point": "图表数据一致性",
+                "description": "符合规范：图表数据一致性",
+                "evidence_quote": "原文第3.5节提到：'图表数据一致性相关内容...'",
+                "location": {
+                  "section": "10.2",
+                  "line_start": 341
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_5_3",
+              "agent_info": {
+                "name": "实验数据组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 74,
+                "audit_level": "Warning",
+                "comment": "统计学显著性检验: 建议改进：统计学显著性检验",
+                "suggestion": "建议完善统计学显著性检验",
+                "tags": [],
+                "point": "统计学显著性检验",
+                "description": "建议改进：统计学显著性检验",
+                "evidence_quote": "原文第7.2节提到：'统计学显著性检验相关内容...'",
+                "location": {
+                  "section": "2.2",
+                  "line_start": 401
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_6_0",
+              "agent_info": {
+                "name": "文献真实性组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 60,
+                "audit_level": "Critical",
+                "comment": "文献年份合理性: 发现严重问题：文献年份合理性",
+                "suggestion": "必须立即修正文献年份合理性",
+                "tags": [],
+                "point": "文献年份合理性",
+                "description": "发现严重问题：文献年份合理性",
+                "evidence_quote": "原文第7.1节提到：'文献年份合理性相关内容...'",
+                "location": {
+                  "section": "6.5",
+                  "line_start": 215
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_6_1",
+              "agent_info": {
+                "name": "文献真实性组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 87,
+                "audit_level": "Info",
+                "comment": "作者信息完整性: 符合规范：作者信息完整性",
+                "suggestion": "保持当前水平",
+                "tags": [],
+                "point": "作者信息完整性",
+                "description": "符合规范：作者信息完整性",
+                "evidence_quote": "原文第8.4节提到：'作者信息完整性相关内容...'",
+                "location": {
+                  "section": "4.3",
+                  "line_start": 435
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_6_2",
+              "agent_info": {
+                "name": "文献真实性组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 92,
+                "audit_level": "Info",
+                "comment": "引用格式规范: 基本合格：引用格式规范",
+                "suggestion": "保持当前水平",
+                "tags": [],
+                "point": "引用格式规范",
+                "description": "基本合格：引用格式规范",
+                "evidence_quote": "原文第3.2节提到：'引用格式规范相关内容...'",
+                "location": {
+                  "section": "2.5",
+                  "line_start": 295
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            },
+            {
+              "request_id": "req_6_3",
+              "agent_info": {
+                "name": "文献真实性组",
+                "version": "v1.0"
+              },
+              "result": {
+                "score": 70,
+                "audit_level": "Warning",
+                "comment": "参考文献真实性: 需要注意：参考文献真实性",
+                "suggestion": "建议补充参考文献真实性",
+                "tags": [],
+                "point": "参考文献真实性",
+                "description": "需要注意：参考文献真实性",
+                "evidence_quote": "原文第8.3节提到：'参考文献真实性相关内容...'",
+                "location": {
+                  "section": "10.2",
+                  "line_start": 172
+                }
+              },
+              "usage": {
+                "tokens": 0,
+                "latency_ms": 0
+              }
+            }
+          ],
+          "removed_results": [],
+          "removed_count": 0,
+          "original_count": 20,
+          "remaining_count": 20,
+          "paper_context_available": false
+        },
+        "markdown_report_path": "reports\\report_Paper_test_paper_001_20260306_215515.md"
+      }
+    },
+    "review_marks_count": 6,
+    "sorted_results_count": 20,
+    "markdown_report_path": "reports\\review_report_test_paper_001_20260306_215555.md"
+  }
+}

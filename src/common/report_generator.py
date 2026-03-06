@@ -451,10 +451,12 @@ class MarkdownReportGenerator:
             ])
 
             for turn in conversation:
-                speaker = turn.get("speaker", "导师")
+                role = turn.get("role", "mentor")
                 content = turn.get("content", "")
+                # 将role转换为中文显示
+                role_display = "导师" if role == "mentor" else role
                 lines.extend([
-                    f"**{speaker}**: {content}",
+                    f"**{role_display}**: {content}",
                     ""
                 ])
 

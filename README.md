@@ -38,7 +38,12 @@ pip install -r requirements.txt
 ### 2. 配置环境
 ```bash
 # 设置DeepSeek API密钥
+# powershell
 $env:DEEPSEEK_API_KEY="your_api_key_here"
+# git bash
+export DEEPSEEK_API_KEY="your_api_key_here"
+# .env文件
+DEEPSEEK_API_KEY=your_api_key_here
 ```
 
 ### 3. 生成测试数据
