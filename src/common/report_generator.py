@@ -51,6 +51,10 @@ class MarkdownReportGenerator:
             logger.error(f"保存Markdown报告失败: {e}")
             raise
 
+    def _get_metadata(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """获取metadata，兼容metadata和plugin_metadata两种字段名"""
+        return result.get("metadata") or result.get("plugin_metadata", {})
+
     def _build_report_content(
         self,
         paper_id: str,
@@ -166,7 +170,7 @@ class MarkdownReportGenerator:
 
     def _build_audit_details(self, result: Dict[str, Any]) -> List[str]:
         """构建审计详情"""
-        metadata = result.get("metadata", {})
+        metadata = self._get_metadata(result)
         conflict_resolution = metadata.get("conflict_resolution", {})
         final_verdict = conflict_resolution.get("final_verdict", {})
 
@@ -210,7 +214,7 @@ class MarkdownReportGenerator:
 
     def _build_conflict_resolution(self, result: Dict[str, Any]) -> List[str]:
         """构建冲突裁决说明"""
-        metadata = result.get("metadata", {})
+        metadata = self._get_metadata(result)
         conflict_resolution = metadata.get("conflict_resolution", {})
         resolved_issues = conflict_resolution.get("resolved_issues", [])
 
@@ -277,7 +281,7 @@ class MarkdownReportGenerator:
 
     def _build_evidence_validation(self, result: Dict[str, Any]) -> List[str]:
         """构建证据验证结果"""
-        metadata = result.get("metadata", {})
+        metadata = self._get_metadata(result)
         conflict_resolution = metadata.get("conflict_resolution", {})
         evidence_validation = conflict_resolution.get("evidence_validation", {})
         evidence_enforcement = conflict_resolution.get("evidence_enforcement", {})
@@ -475,7 +479,7 @@ class MarkdownReportGenerator:
         """构建人工复核建议"""
         needs_review = result.get("needs_human_review", False)
         review_reason = result.get("human_review_reason")
-        metadata = result.get("metadata", {})
+        metadata = self._get_metadata(result)
         review_marks_count = metadata.get("review_marks_count", 0)
 
         lines = [
@@ -579,7 +583,7 @@ class MarkdownReportGenerator:
 
     def _build_appendix(self, result: Dict[str, Any]) -> List[str]:
         """构建附录"""
-        metadata = result.get("metadata", {})
+        metadata = self._get_metadata(result)
 
         lines = [
             "## 附录",
@@ -607,11 +611,13 @@ class MarkdownReportGenerator:
 
         sorted_results_count = metadata.get("sorted_results_count", 0)
         review_marks_count = metadata.get("review_marks_count", 0)
+        conflict_resolution = metadata.get("conflict_resolution", {})
+        resolved_issues_count = len(conflict_resolution.get("resolved_issues", []))
 
         lines.extend([
             f"- **审核项总数**: {sorted_results_count}",
             f"- **复核标记数**: {review_marks_count}",
-            f"- **冲突裁决数**: {len(result.get('metadata', {}).get('conflict_resolution', {}).get('resolved_issues', []))}",
+            f"- **冲突裁决数**: {resolved_issues_count}",
             ""
         ])
 
