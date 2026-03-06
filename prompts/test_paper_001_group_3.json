@@ -1,0 +1,60 @@
+{
+  "group_id": 3,
+  "group_name": "逻辑审计组",
+  "paper_id": "test_paper_001",
+  "audit_results": [
+    {
+      "id": "item-3-001",
+      "point": "章节衔接",
+      "score": 81,
+      "level": "Info",
+      "description": "表现良好：章节衔接",
+      "evidence_quote": "原文第1.2节提到：'章节衔接相关内容...'",
+      "location": {
+        "section": "10.4",
+        "line_start": 387
+      },
+      "suggestion": "继续保持"
+    },
+    {
+      "id": "item-3-002",
+      "point": "章节衔接",
+      "score": 84,
+      "level": "Info",
+      "description": "表现良好：章节衔接",
+      "evidence_quote": "原文第1.2节提到：'章节衔接相关内容...'",
+      "location": {
+        "section": "4.2",
+        "line_start": 231
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-3-003",
+      "point": "摘要与结论一致性",
+      "score": 92,
+      "level": "Info",
+      "description": "表现良好：摘要与结论一致性",
+      "evidence_quote": "原文第5.3节提到：'摘要与结论一致性相关内容...'",
+      "location": {
+        "section": "10.4",
+        "line_start": 256
+      },
+      "suggestion": "继续保持"
+    },
+    {
+      "id": "item-3-004",
+      "point": "研究问题明确性",
+      "score": 40,
+      "level": "Critical",
+      "description": "存在关键缺陷：研究问题明确性",
+      "evidence_quote": "原文第5.2节提到：'研究问题明确性相关内容...'",
+      "location": {
+        "section": "4.1",
+        "line_start": 232
+      },
+      "suggestion": "需要彻底修改研究问题明确性"
+    }
+  ],
+  "timestamp": "2026-03-06T20:26:35.629438"
+}

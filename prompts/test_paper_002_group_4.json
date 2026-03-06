@@ -1,0 +1,73 @@
+{
+  "group_id": 4,
+  "group_name": "代码审计组",
+  "paper_id": "test_paper_002",
+  "audit_results": [
+    {
+      "id": "item-4-001",
+      "point": "算法实现正确性",
+      "score": 94,
+      "level": "Info",
+      "description": "基本合格：算法实现正确性",
+      "evidence_quote": "原文第9.3节提到：'算法实现正确性相关内容...'",
+      "location": {
+        "section": "3.2",
+        "line_start": 299
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-4-002",
+      "point": "依赖管理",
+      "score": 60,
+      "level": "Critical",
+      "description": "存在关键缺陷：依赖管理",
+      "evidence_quote": "原文第4.1节提到：'依赖管理相关内容...'",
+      "location": {
+        "section": "3.2",
+        "line_start": 278
+      },
+      "suggestion": "强烈建议重新审查依赖管理"
+    },
+    {
+      "id": "item-4-003",
+      "point": "依赖管理",
+      "score": 61,
+      "level": "Warning",
+      "description": "建议改进：依赖管理",
+      "evidence_quote": "原文第1.2节提到：'依赖管理相关内容...'",
+      "location": {
+        "section": "1.3",
+        "line_start": 76
+      },
+      "suggestion": "建议补充依赖管理"
+    },
+    {
+      "id": "item-4-004",
+      "point": "依赖管理",
+      "score": 84,
+      "level": "Info",
+      "description": "符合规范：依赖管理",
+      "evidence_quote": "原文第6.2节提到：'依赖管理相关内容...'",
+      "location": {
+        "section": "4.1",
+        "line_start": 298
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-4-005",
+      "point": "依赖管理",
+      "score": 84,
+      "level": "Info",
+      "description": "符合规范：依赖管理",
+      "evidence_quote": "原文第9.3节提到：'依赖管理相关内容...'",
+      "location": {
+        "section": "9.3",
+        "line_start": 300
+      },
+      "suggestion": "可以进一步提升依赖管理"
+    }
+  ],
+  "timestamp": "2026-03-06T20:26:35.637141"
+}

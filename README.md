@@ -38,7 +38,7 @@ pip install -r requirements.txt
 ### 2. 配置环境
 ```bash
 # 设置DeepSeek API密钥
-export DEEPSEEK_API_KEY="your_api_key_here"
+$env:DEEPSEEK_API_KEY="your_api_key_here"
 ```
 
 ### 3. 生成测试数据
@@ -49,13 +49,18 @@ python tests/generate_test_data.py --num-papers 3
 ### 4. 运行程序
 ```bash
 # 交互式运行
-python run.py
+python run.py --mode interactive
 
 # 从数据库读取
 python run.py --mode database
 
-# 从文件读取
+# 从文件读取（默认不启用导师对话）
 python run.py --mode file --prompts-dir prompts
+
+# 从文件读取（启用导师对话，需要DEEPSEEK_API_KEY环境变量）
+python run.py --mode file --prompts-dir prompts --enable-dialogue
+
+# 所有模式均支持--enable-dialogue
 ```
 
 ### 5. 查看评审报告

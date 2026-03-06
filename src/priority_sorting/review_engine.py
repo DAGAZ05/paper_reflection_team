@@ -71,10 +71,42 @@ class ReviewDecisionEngine:
         """字段标准化：统一不同审计组的字段命名"""
         normalized_data = {}
         for old_field, new_field in self.field_mapping["audit_result"].items():
-            normalized_data[new_field] = raw_audit_data.get(old_field, raw_audit_data.get(new_field, ""))
+            value = raw_audit_data.get(old_field, raw_audit_data.get(new_field, ""))
+
+            # 特殊处理：level字段映射
+            if new_field == "problem_level" and value:
+                # 将Info映射为None，Warning映射为Minor
+                level_mapping = {
+                    "Info": "None",
+                    "Warning": "Minor",
+                    "Critical": "Critical",
+                    "Major": "Major",
+                    "Minor": "Minor",
+                    "None": "None"
+                }
+                value = level_mapping.get(value, value)
+
+            # 特殊处理：score字段转换为confidence（0-100转为0-1）
+            if new_field == "confidence" and value:
+                try:
+                    score_val = float(value)
+                    if score_val > 1:  # 如果是0-100范围，转换为0-1
+                        value = score_val / 100.0
+                    else:
+                        value = score_val
+                except (ValueError, TypeError):
+                    value = 0.5  # 默认置信度
+
+            normalized_data[new_field] = value
+
         # 补充其他必要字段
-        for key in ["audit_agent", "result_id", "impact_scope"]:
+        for key in ["audit_agent", "result_id"]:
             normalized_data[key] = raw_audit_data.get(key, "")
+
+        # impact_scope默认值
+        if not normalized_data.get("impact_scope"):
+            normalized_data["impact_scope"] = "无明确范围"
+
         return normalized_data
 
     def calculate_sort_score(self, problem_level: str, impact_scope: str) -> float:
@@ -140,14 +172,26 @@ class ReviewDecisionEngine:
         """处理审计结果：排序+复核标记"""
         # 1. 字段标准化
         normalized_results = []
-        for raw_data in raw_audit_list:
-            normalized_data = self._normalize_audit_fields(raw_data)
-            try:
-                audit_result = AuditResult(**normalized_data)
-                normalized_results.append(audit_result)
-            except Exception as e:
-                print(f"数据标准化失败：{e}，跳过该条数据")
-                continue
+        for raw_group in raw_audit_list:
+            # 提取group信息
+            group_id = raw_group.get("group_id", "")
+            group_name = raw_group.get("group_name", f"审计组{group_id}")
+
+            # 处理audit_results数组
+            audit_results = raw_group.get("audit_results", [])
+            for raw_data in audit_results:
+                # 添加group信息到每条结果
+                raw_data["audit_agent"] = group_name
+                if not raw_data.get("result_id"):
+                    raw_data["result_id"] = raw_data.get("id", "")
+
+                normalized_data = self._normalize_audit_fields(raw_data)
+                try:
+                    audit_result = AuditResult(**normalized_data)
+                    normalized_results.append(audit_result)
+                except Exception as e:
+                    print(f"数据标准化失败：{e}，跳过该条数据")
+                    continue
 
         # 2. 检查单条记录的复核触发条件
         single_review_marks = []

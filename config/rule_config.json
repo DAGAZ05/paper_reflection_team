@@ -25,7 +25,15 @@
       "old_audit_point": "audit_point",
       "old_problem_level": "problem_level",
       "old_confidence": "confidence",
-      "old_evidence": "evidence"
+      "old_evidence": "evidence",
+      "point": "audit_point",
+      "level": "problem_level",
+      "score": "confidence",
+      "evidence_quote": "evidence",
+      "id": "result_id",
+      "description": "description",
+      "suggestion": "suggestion",
+      "location": "location"
     }
   }
 }

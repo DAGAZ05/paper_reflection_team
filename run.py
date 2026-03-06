@@ -34,13 +34,14 @@ logger = logging.getLogger(__name__)
 class ReflectionOrchestrator:
     """反思评估编排器"""
 
-    def __init__(self, mode: str = "database"):
+    def __init__(self, mode: str = "database", enable_dialogue: bool = False):
         self.conflict_resolver = None
         self.deduplicator = None
         self.evidence_validator = None
         self.dialogue_engine = None
         self.review_engine = None
         self.mode = mode  # "database" or "file"
+        self.enable_dialogue = enable_dialogue  # 是否启用导师对话生成
 
     def initialize_modules(self):
         """初始化各模块（延迟初始化以避免导入错误）"""
@@ -115,15 +116,18 @@ class ReflectionOrchestrator:
                 else:
                     minor_issues.append(priority_issue)
 
-            # 步骤4: 生成导师对话
-            logger.info("步骤4: 生成导师对话")
-            all_issues = critical_issues + major_issues + minor_issues
+            # 步骤4: 生成导师对话（可选）
             mentor_dialogue = None
-            if all_issues:
-                try:
-                    mentor_dialogue = await self.dialogue_engine.generate_dialogue("软件工程", all_issues)
-                except Exception as e:
-                    logger.warning(f"导师对话生成失败: {e}")
+            if self.enable_dialogue:
+                logger.info("步骤4: 生成导师对话")
+                all_issues = critical_issues + major_issues + minor_issues
+                if all_issues:
+                    try:
+                        mentor_dialogue = await self.dialogue_engine.generate_dialogue("软件工程", all_issues)
+                    except Exception as e:
+                        logger.warning(f"导师对话生成失败: {e}")
+            else:
+                logger.info("步骤4: 跳过导师对话生成（未启用）")
 
             # 步骤5: 确定是否需要人工复核
             needs_human_review = len(review_marks) > 0
@@ -346,6 +350,11 @@ async def main():
         default="prompts",
         help="JSON文件目录（仅在file模式下有效）"
     )
+    parser.add_argument(
+        "--enable-dialogue",
+        action="store_true",
+        help="启用导师对话生成（需要DeepSeek API）"
+    )
 
     args = parser.parse_args()
 
@@ -363,13 +372,13 @@ async def main():
 
         if choice == "1":
             # 创建database模式的编排器
-            orchestrator = ReflectionOrchestrator(mode="database")
+            orchestrator = ReflectionOrchestrator(mode="database", enable_dialogue=args.enable_dialogue)
             orchestrator.initialize_modules()
             paper_id = input("请输入论文ID (留空处理所有论文): ").strip() or None
             await orchestrator.run_from_database(paper_id)
         elif choice == "2":
             # 创建file模式的编排器
-            orchestrator = ReflectionOrchestrator(mode="file")
+            orchestrator = ReflectionOrchestrator(mode="file", enable_dialogue=args.enable_dialogue)
             orchestrator.initialize_modules()
             prompts_dir = input(f"请输入JSON文件目录 (默认: prompts): ").strip() or "prompts"
             await orchestrator.run_from_files(prompts_dir)
@@ -380,13 +389,13 @@ async def main():
 
     elif args.mode == "database":
         # 创建database模式的编排器
-        orchestrator = ReflectionOrchestrator(mode="database")
+        orchestrator = ReflectionOrchestrator(mode="database", enable_dialogue=args.enable_dialogue)
         orchestrator.initialize_modules()
         await orchestrator.run_from_database(args.paper_id)
 
     elif args.mode == "file":
         # 创建file模式的编排器
-        orchestrator = ReflectionOrchestrator(mode="file")
+        orchestrator = ReflectionOrchestrator(mode="file", enable_dialogue=args.enable_dialogue)
         orchestrator.initialize_modules()
         await orchestrator.run_from_files(args.prompts_dir)
 

@@ -1,0 +1,73 @@
+{
+  "group_id": 6,
+  "group_name": "文献真实性组",
+  "paper_id": "test_paper_002",
+  "audit_results": [
+    {
+      "id": "item-6-001",
+      "point": "引用格式规范",
+      "score": 87,
+      "level": "Info",
+      "description": "表现良好：引用格式规范",
+      "evidence_quote": "原文第5.5节提到：'引用格式规范相关内容...'",
+      "location": {
+        "section": "1.1",
+        "line_start": 200
+      },
+      "suggestion": "可以进一步提升引用格式规范"
+    },
+    {
+      "id": "item-6-002",
+      "point": "引用格式规范",
+      "score": 87,
+      "level": "Info",
+      "description": "基本合格：引用格式规范",
+      "evidence_quote": "原文第2.5节提到：'引用格式规范相关内容...'",
+      "location": {
+        "section": "4.2",
+        "line_start": 379
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-6-003",
+      "point": "DOI有效性",
+      "score": 89,
+      "level": "Info",
+      "description": "基本合格：DOI有效性",
+      "evidence_quote": "原文第4.2节提到：'DOI有效性相关内容...'",
+      "location": {
+        "section": "8.1",
+        "line_start": 203
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-6-004",
+      "point": "参考文献真实性",
+      "score": 83,
+      "level": "Info",
+      "description": "表现良好：参考文献真实性",
+      "evidence_quote": "原文第8.3节提到：'参考文献真实性相关内容...'",
+      "location": {
+        "section": "1.1",
+        "line_start": 233
+      },
+      "suggestion": "可以进一步提升参考文献真实性"
+    },
+    {
+      "id": "item-6-005",
+      "point": "引用格式规范",
+      "score": 80,
+      "level": "Info",
+      "description": "基本合格：引用格式规范",
+      "evidence_quote": "原文第7.3节提到：'引用格式规范相关内容...'",
+      "location": {
+        "section": "3.2",
+        "line_start": 5
+      },
+      "suggestion": "保持当前水平"
+    }
+  ],
+  "timestamp": "2026-03-06T20:26:35.637141"
+}

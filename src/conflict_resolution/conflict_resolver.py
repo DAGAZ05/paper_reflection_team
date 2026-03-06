@@ -623,9 +623,99 @@ class ConflictResolver:
             import re
             json_match = re.search(r'\{.*\}', content, re.DOTALL)
             if json_match:
-                resolution_data = json.loads(json_match.group())
+                json_str = json_match.group()
             else:
-                resolution_data = json.loads(content)
+                json_str = content
+
+            # 保存原始JSON用于调试
+            original_json_str = json_str
+
+            # 多层次JSON修复策略
+            def repair_json_basic(json_text):
+                """基本JSON修复"""
+                # 移除尾随逗号
+                fixed = re.sub(r',(\s*[}\]])', r'\1', json_text)
+                # 移除连续逗号
+                fixed = re.sub(r',\s*,', ',', fixed)
+                return fixed
+
+            def repair_json_aggressive(json_text):
+                """激进JSON修复"""
+                # 移除所有可能的尾随逗号
+                fixed = re.sub(r',(\s*[}\]])', r'\1', json_text)
+                fixed = re.sub(r',\s*}', '}', fixed)
+                fixed = re.sub(r',\s*]', ']', fixed)
+
+                # 修复缺少逗号的情况
+                fixed = re.sub(r'"\s*\n\s*"', '",\n"', fixed)  # 字符串之间缺少逗号
+                fixed = re.sub(r'}\s*\n\s*{', '},\n{', fixed)  # 对象之间缺少逗号
+                fixed = re.sub(r']\s*\n\s*\[', '],\n[', fixed)  # 数组之间缺少逗号
+
+                # 修复属性值后缺少逗号的情况
+                # 例如: "key": "value"\n  "key2" 应该是 "key": "value",\n  "key2"
+                fixed = re.sub(r'(["\d\]}])\s*\n\s*"', r'\1,\n"', fixed)
+
+                # 移除注释（如果有）
+                fixed = re.sub(r'//.*?\n', '\n', fixed)
+                fixed = re.sub(r'/\*.*?\*/', '', fixed, flags=re.DOTALL)
+
+                return fixed
+
+            # 尝试解析JSON，使用多次修复尝试
+            resolution_data = None
+            last_error = None
+
+            for attempt in range(4):
+                try:
+                    if attempt == 0:
+                        # 第一次尝试：原始JSON
+                        resolution_data = json.loads(json_str)
+                        break
+                    elif attempt == 1:
+                        # 第二次尝试：基本修复
+                        json_str = repair_json_basic(original_json_str)
+                        resolution_data = json.loads(json_str)
+                        logger.info("JSON修复成功（基本修复）")
+                        break
+                    elif attempt == 2:
+                        # 第三次尝试：激进修复
+                        json_str = repair_json_aggressive(original_json_str)
+                        resolution_data = json.loads(json_str)
+                        logger.info("JSON修复成功（激进修复）")
+                        break
+                    else:
+                        # 第四次尝试：使用json5或其他宽松解析器的替代方案
+                        # 尝试手动修复特定位置的问题
+                        json_str = repair_json_aggressive(original_json_str)
+                        # 额外处理：移除所有可能的格式问题
+                        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+                        json_str = json_str.replace(',}', '}').replace(',]', ']')
+                        resolution_data = json.loads(json_str)
+                        logger.info("JSON修复成功（最终尝试）")
+                        break
+                except json.JSONDecodeError as je:
+                    last_error = je
+                    if attempt == 0:
+                        logger.warning(f"JSON解析失败（尝试{attempt+1}/4）: {je}")
+                        logger.debug(f"原始JSON前500字符: {original_json_str[:500]}")
+                    elif attempt < 3:
+                        logger.warning(f"JSON解析失败（尝试{attempt+1}/4）: {je}")
+                        # 显示错误位置附近的内容
+                        error_pos = je.pos if hasattr(je, 'pos') else 0
+                        context_start = max(0, error_pos - 50)
+                        context_end = min(len(json_str), error_pos + 50)
+                        logger.debug(f"错误位置附近: ...{json_str[context_start:context_end]}...")
+                    else:
+                        # 最后一次尝试失败
+                        logger.error(f"JSON解析失败（所有尝试均失败）: {je}")
+                        logger.error(f"错误位置: line {je.lineno}, column {je.colno}")
+                        # 显示错误位置附近的内容
+                        lines = json_str.split('\n')
+                        if je.lineno <= len(lines):
+                            error_line = lines[je.lineno - 1]
+                            logger.error(f"错误行内容: {error_line}")
+                            logger.error(f"错误位置: {' ' * (je.colno - 1)}^")
+                        raise
 
             usage = {
                 "tokens": response.get("usage", {}).get("total_tokens", 0),

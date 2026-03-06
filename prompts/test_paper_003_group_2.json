@@ -1,0 +1,73 @@
+{
+  "group_id": 2,
+  "group_name": "格式审计组",
+  "paper_id": "test_paper_003",
+  "audit_results": [
+    {
+      "id": "item-2-001",
+      "point": "公式对齐",
+      "score": 74,
+      "level": "Warning",
+      "description": "存在问题：公式对齐",
+      "evidence_quote": "原文第7.4节提到：'公式对齐相关内容...'",
+      "location": {
+        "section": "8.1",
+        "line_start": 55
+      },
+      "suggestion": "建议完善公式对齐"
+    },
+    {
+      "id": "item-2-002",
+      "point": "公式对齐",
+      "score": 91,
+      "level": "Info",
+      "description": "基本合格：公式对齐",
+      "evidence_quote": "原文第7.3节提到：'公式对齐相关内容...'",
+      "location": {
+        "section": "7.1",
+        "line_start": 149
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-2-003",
+      "point": "参考文献格式",
+      "score": 63,
+      "level": "Warning",
+      "description": "需要注意：参考文献格式",
+      "evidence_quote": "原文第4.4节提到：'参考文献格式相关内容...'",
+      "location": {
+        "section": "2.1",
+        "line_start": 29
+      },
+      "suggestion": "建议优化参考文献格式"
+    },
+    {
+      "id": "item-2-004",
+      "point": "公式对齐",
+      "score": 90,
+      "level": "Info",
+      "description": "表现良好：公式对齐",
+      "evidence_quote": "原文第5.3节提到：'公式对齐相关内容...'",
+      "location": {
+        "section": "10.2",
+        "line_start": 81
+      },
+      "suggestion": "可以进一步提升公式对齐"
+    },
+    {
+      "id": "item-2-005",
+      "point": "参考文献格式",
+      "score": 91,
+      "level": "Info",
+      "description": "符合规范：参考文献格式",
+      "evidence_quote": "原文第8.3节提到：'参考文献格式相关内容...'",
+      "location": {
+        "section": "4.4",
+        "line_start": 150
+      },
+      "suggestion": "继续保持"
+    }
+  ],
+  "timestamp": "2026-03-06T20:26:35.643312"
+}

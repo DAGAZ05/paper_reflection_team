@@ -1,5 +1,4 @@
 import yaml
-import litellm
 from pathlib import Path
 from typing import List, Dict, Optional
 import logging
@@ -9,12 +8,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.common.config_c import settings
 from src.common.models import MentorDialogue, PrioritizedIssue
+from src.api import deepseek_client
 
 logger = logging.getLogger(__name__)
 
 class DialogueEngine:
     def __init__(self):
-        self.llm_config = settings.llm
+        self.llm_client = deepseek_client
         self.phrases = self._load_phrases()
         self.role_personas = settings.dialogue.field_personas
 
@@ -49,18 +49,15 @@ class DialogueEngine:
 请用中文，语气温和但专业，避免直接否定。
 """
         try:
-            response = await litellm.acompletion(
-                model=self.llm_config.model,
+            response = await self.llm_client.chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=self.llm_config.temperature,
-                max_tokens=self.llm_config.max_tokens,
-                api_base=self.llm_config.api_base,
-                api_key=self.llm_config.api_key
+                temperature=0.7,
+                max_tokens=1500
             )
-            content = response.choices[0].message.content
+            content = response["choices"][0]["message"]["content"]
             # 构建结构化对话（简化：仅返回一条长消息）
             conversation = [{"role": "mentor", "content": content}]
             # 质量自评（简单规则：长度超过100字且包含建议）

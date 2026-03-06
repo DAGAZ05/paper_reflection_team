@@ -1,0 +1,73 @@
+{
+  "group_id": 5,
+  "group_name": "实验数据组",
+  "paper_id": "test_paper_003",
+  "audit_results": [
+    {
+      "id": "item-5-001",
+      "point": "数据分布合理性",
+      "score": 62,
+      "level": "Warning",
+      "description": "需要注意：数据分布合理性",
+      "evidence_quote": "原文第6.4节提到：'数据分布合理性相关内容...'",
+      "location": {
+        "section": "5.5",
+        "line_start": 37
+      },
+      "suggestion": "建议完善数据分布合理性"
+    },
+    {
+      "id": "item-5-002",
+      "point": "样本量充足性",
+      "score": 94,
+      "level": "Info",
+      "description": "表现良好：样本量充足性",
+      "evidence_quote": "原文第10.5节提到：'样本量充足性相关内容...'",
+      "location": {
+        "section": "6.5",
+        "line_start": 301
+      },
+      "suggestion": "可以进一步提升样本量充足性"
+    },
+    {
+      "id": "item-5-003",
+      "point": "实验可重复性",
+      "score": 82,
+      "level": "Info",
+      "description": "符合规范：实验可重复性",
+      "evidence_quote": "原文第7.5节提到：'实验可重复性相关内容...'",
+      "location": {
+        "section": "2.4",
+        "line_start": 141
+      },
+      "suggestion": "可以进一步提升实验可重复性"
+    },
+    {
+      "id": "item-5-004",
+      "point": "数据分布合理性",
+      "score": 80,
+      "level": "Info",
+      "description": "表现良好：数据分布合理性",
+      "evidence_quote": "原文第10.3节提到：'数据分布合理性相关内容...'",
+      "location": {
+        "section": "1.1",
+        "line_start": 105
+      },
+      "suggestion": "继续保持"
+    },
+    {
+      "id": "item-5-005",
+      "point": "实验可重复性",
+      "score": 88,
+      "level": "Info",
+      "description": "基本合格：实验可重复性",
+      "evidence_quote": "原文第5.2节提到：'实验可重复性相关内容...'",
+      "location": {
+        "section": "3.2",
+        "line_start": 496
+      },
+      "suggestion": "保持当前水平"
+    }
+  ],
+  "timestamp": "2026-03-06T20:26:35.643312"
+}
