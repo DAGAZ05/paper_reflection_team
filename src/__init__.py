@@ -3,57 +3,17 @@
 整合了四位成员的工作成果
 """
 
-from .models import (
-    # 枚举类型
-    AuditLevel,
-    ConflictType,
-    AgentType,
-    # 成员B的模型
-    Section,
-    EvidenceItem,
-    EvidenceSpan,
-    EvidenceValidationResult,
-    DedupItem,
-    DedupCluster,
-    DedupResult,
-    # 成员A的模型
-    AgentResultData,
-    AgentResult,
-    ConflictResolutionRequest,
-    ConflictResolutionResponse,
-    ResolvedIssue,
-    # 成员D的模型
-    AuditResult,
-    ReviewMarkResult,
-    SortedAuditResult,
-    # 成员C的模型
-    PrioritizedIssue,
-    MentorDialogue,
-    ReflectionResult,
-)
-
-from .conflict_resolver import ConflictResolver
-from .dedup import Deduplicator
-from .evidence import EvidenceValidator
-from .dialogue_engine import DialogueEngine
-from .review_engine import ReviewDecisionEngine
-from .main import ReflectionJudgeOrchestrator
-
+# 导出版本信息
 __version__ = "1.0.0"
-__all__ = [
-    # 主编排器
-    "ReflectionJudgeOrchestrator",
-    # 核心模块
-    "ConflictResolver",
-    "Deduplicator",
-    "EvidenceValidator",
-    "DialogueEngine",
-    "ReviewDecisionEngine",
-    # 数据模型
-    "AuditLevel",
-    "ConflictType",
-    "AgentType",
-    "Section",
-    "EvidenceItem",
-    "ReflectionResult",
-]
+
+# 注意：由于项目已重新组织为模块化结构，
+# 请直接从各子模块导入所需的类和函数：
+#
+# from src.db import db_manager
+# from src.api import deepseek_client
+# from src.common.models import ReflectionResult
+# from src.conflict_resolution import ConflictResolver
+# from src.deduplication import Deduplicator
+# from src.evidence_validation import EvidenceValidator
+# from src.dialogue_generation import DialogueEngine
+# from src.priority_sorting import ReviewDecisionEngine

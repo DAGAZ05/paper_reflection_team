@@ -1,7 +1,6 @@
 import yaml
 from pathlib import Path
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
 class DatabaseConfig(BaseModel):
     host: str = "10.13.1.26"
@@ -35,7 +34,7 @@ class DialogueConfig(BaseModel):
         "理论计算机": "图灵奖提名者，强调形式化证明严谨性"
     }
 
-class Settings(BaseSettings):
+class Settings(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
     llm: LLMConfig = LLMConfig()
     evidence: EvidenceValidationConfig = EvidenceValidationConfig()
@@ -48,8 +47,16 @@ class Settings(BaseSettings):
 
     @classmethod
     def from_yaml(cls, path: Path = Path("config/reflection_config.yaml")):
-        with open(path) as f:
-            yaml_data = yaml.safe_load(f)
-        return cls(**yaml_data)
+        if path.exists():
+            with open(path) as f:
+                yaml_data = yaml.safe_load(f)
+            return cls(**yaml_data)
+        else:
+            # 如果配置文件不存在，使用默认值
+            return cls()
 
-settings = Settings.from_yaml()  # 加载配置
+# 尝试加载配置，如果失败则使用默认值
+try:
+    settings = Settings.from_yaml()
+except Exception:
+    settings = Settings()

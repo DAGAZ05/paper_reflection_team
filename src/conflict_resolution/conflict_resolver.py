@@ -24,10 +24,11 @@ LEVEL_PRIORITY = {"Info": 0, "Warning": 1, "Critical": 2}
 
 
 class ConflictResolver:
-    def __init__(self):
+    def __init__(self, mode: str = "database"):
         # 使用统一的DeepSeek客户端和数据库管理器
         self.llm_client = deepseek_client
         self.db_client = db_manager
+        self.mode = mode  # "database" or "file"
         self.conflict_patterns = self._load_conflict_patterns()
         # 审计组权重配置（根据重要性调整）
         self.agent_weights = {
@@ -912,15 +913,16 @@ class ConflictResolver:
             paper_title = request.metadata.get("paper_title", "未知论文")
             paper_context = ""
 
-            if not agent_results and paper_id:
+            # 仅在database模式下从数据库读取数据
+            if self.mode == "database" and not agent_results and paper_id:
                 await self.db_client.connect()
                 agent_results = await self.db_client.get_agent_results(paper_id)
                 paper_context = await self.db_client.get_paper_content(paper_id)
 
             agent_results = self._normalize_agent_results(agent_results)
 
-            # 获取论文内容用于证据验证
-            if not paper_context and paper_id:
+            # 获取论文内容用于证据验证（仅在database模式）
+            if self.mode == "database" and not paper_context and paper_id:
                 try:
                     await self.db_client.connect()
                     paper_context = await self.db_client.get_paper_content(paper_id)
@@ -994,7 +996,7 @@ class ConflictResolver:
                     usage={"tokens": 0, "latency_ms": 50},
                 )
 
-            resolution_data, usage = await self.llm_client.resolve_conflicts_with_llm(request, conflicts, paper_context)
+            resolution_data, usage = await self.resolve_conflicts_with_llm(request, conflicts, paper_context)
             resolution_data = self._normalize_resolution_data(resolution_data)
 
             resolved_issues = self.deduplicate_issues(resolution_data.get("resolved_issues", []))
@@ -1015,7 +1017,9 @@ class ConflictResolver:
 
             if paper_id:
                 resolution_data["paper_id"] = paper_id
-                await self.db_client.save_resolution_result(request.request_id, resolution_data, usage)
+                # 仅在database模式下保存到数据库
+                if self.mode == "database":
+                    await self.db_client.save_reflection_result(request.request_id, resolution_data, usage)
 
             return ConflictResolutionResponse(
                 request_id=request.request_id,
@@ -1030,7 +1034,9 @@ class ConflictResolver:
             logger.error("冲突裁决失败: %s", exc, exc_info=True)
             raise HTTPException(status_code=500, detail=f"内部服务错误: {exc}") from exc
         finally:
-            await self.db_client.disconnect()
+            # 仅在database模式下断开数据库连接
+            if self.mode == "database":
+                await self.db_client.disconnect()
 
 
 resolver = ConflictResolver()

@@ -34,17 +34,18 @@ logger = logging.getLogger(__name__)
 class ReflectionOrchestrator:
     """反思评估编排器"""
 
-    def __init__(self):
+    def __init__(self, mode: str = "database"):
         self.conflict_resolver = None
         self.deduplicator = None
         self.evidence_validator = None
         self.dialogue_engine = None
         self.review_engine = None
+        self.mode = mode  # "database" or "file"
 
     def initialize_modules(self):
         """初始化各模块（延迟初始化以避免导入错误）"""
         try:
-            self.conflict_resolver = ConflictResolver()
+            self.conflict_resolver = ConflictResolver(mode=self.mode)
             self.deduplicator = Deduplicator()
             self.evidence_validator = EvidenceValidator()
             self.dialogue_engine = DialogueEngine()
@@ -307,8 +308,10 @@ class ReflectionOrchestrator:
 
             result = await self.process_paper(paper_id, audits)
 
-            # 保存结果到文件
-            output_file = prompts_path / f"result_{paper_id}.json"
+            # 保存结果到results文件夹
+            results_dir = Path("results")
+            results_dir.mkdir(exist_ok=True)
+            output_file = results_dir / f"result_{paper_id}.json"
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result.model_dump(), f, ensure_ascii=False, indent=2)
             logger.info(f"结果已保存到: {output_file}")
@@ -320,7 +323,7 @@ class ReflectionOrchestrator:
             print(f"是否需要人工复核: {result.needs_human_review}")
             markdown_path = result.plugin_metadata.get("markdown_report_path")
             if markdown_path:
-                print(f"📄 Markdown报告: {markdown_path}")
+                print(f"Markdown报告: {markdown_path}")
 
 
 async def main():
@@ -346,10 +349,6 @@ async def main():
 
     args = parser.parse_args()
 
-    # 创建编排器
-    orchestrator = ReflectionOrchestrator()
-    orchestrator.initialize_modules()
-
     # 根据模式运行
     if args.mode == "interactive":
         print("\n" + "="*60)
@@ -363,9 +362,15 @@ async def main():
         choice = input("\n请输入选项 (0-2): ").strip()
 
         if choice == "1":
+            # 创建database模式的编排器
+            orchestrator = ReflectionOrchestrator(mode="database")
+            orchestrator.initialize_modules()
             paper_id = input("请输入论文ID (留空处理所有论文): ").strip() or None
             await orchestrator.run_from_database(paper_id)
         elif choice == "2":
+            # 创建file模式的编排器
+            orchestrator = ReflectionOrchestrator(mode="file")
+            orchestrator.initialize_modules()
             prompts_dir = input(f"请输入JSON文件目录 (默认: prompts): ").strip() or "prompts"
             await orchestrator.run_from_files(prompts_dir)
         elif choice == "0":
@@ -374,9 +379,15 @@ async def main():
             print("无效选项")
 
     elif args.mode == "database":
+        # 创建database模式的编排器
+        orchestrator = ReflectionOrchestrator(mode="database")
+        orchestrator.initialize_modules()
         await orchestrator.run_from_database(args.paper_id)
 
     elif args.mode == "file":
+        # 创建file模式的编排器
+        orchestrator = ReflectionOrchestrator(mode="file")
+        orchestrator.initialize_modules()
         await orchestrator.run_from_files(args.prompts_dir)
 
 
