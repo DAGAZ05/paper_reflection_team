@@ -6,7 +6,29 @@
 
 This is the work of the reflection and evaluation team for our school's project, evaluation indicators for the quality of master's degree theses in software engineering.
 
-## 快速开始
+## ⚡ 快速开始（3步）
+
+**详细说明请查看**: [最终使用说明](docs/最终使用说明.md)
+
+### 1. 生成测试数据
+```bash
+python tests/generate_test_data.py --num-papers 3
+```
+
+### 2. 运行评审程序
+```bash
+python run.py
+# 选择方案2（从文件读取）
+```
+
+### 3. 查看评审报告
+```bash
+ls reports/  # Markdown报告
+```
+
+---
+
+## 详细使用指南
 
 ### 1. 安装依赖
 ```bash

@@ -1,0 +1,73 @@
+{
+  "group_id": 4,
+  "group_name": "代码审计组",
+  "paper_id": "test_paper_002",
+  "audit_results": [
+    {
+      "id": "item-4-001",
+      "point": "README完整性",
+      "score": 94,
+      "level": "Info",
+      "description": "符合规范：README完整性",
+      "evidence_quote": "原文第2.2节提到：'README完整性相关内容...'",
+      "location": {
+        "section": "5.4",
+        "line_start": 278
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-4-002",
+      "point": "依赖管理",
+      "score": 73,
+      "level": "Warning",
+      "description": "存在问题：依赖管理",
+      "evidence_quote": "原文第2.3节提到：'依赖管理相关内容...'",
+      "location": {
+        "section": "3.5",
+        "line_start": 266
+      },
+      "suggestion": "建议优化依赖管理"
+    },
+    {
+      "id": "item-4-003",
+      "point": "代码规范性",
+      "score": 71,
+      "level": "Warning",
+      "description": "需要注意：代码规范性",
+      "evidence_quote": "原文第7.3节提到：'代码规范性相关内容...'",
+      "location": {
+        "section": "1.2",
+        "line_start": 247
+      },
+      "suggestion": "建议完善代码规范性"
+    },
+    {
+      "id": "item-4-004",
+      "point": "代码与描述一致性",
+      "score": 74,
+      "level": "Warning",
+      "description": "存在问题：代码与描述一致性",
+      "evidence_quote": "原文第10.3节提到：'代码与描述一致性相关内容...'",
+      "location": {
+        "section": "5.3",
+        "line_start": 422
+      },
+      "suggestion": "建议优化代码与描述一致性"
+    },
+    {
+      "id": "item-4-005",
+      "point": "代码规范性",
+      "score": 89,
+      "level": "Info",
+      "description": "基本合格：代码规范性",
+      "evidence_quote": "原文第10.5节提到：'代码规范性相关内容...'",
+      "location": {
+        "section": "5.1",
+        "line_start": 183
+      },
+      "suggestion": "保持当前水平"
+    }
+  ],
+  "timestamp": "2026-03-06T18:23:15.874989"
+}

@@ -1,0 +1,73 @@
+{
+  "group_id": 4,
+  "group_name": "代码审计组",
+  "paper_id": "test_paper_001",
+  "audit_results": [
+    {
+      "id": "item-4-001",
+      "point": "算法实现正确性",
+      "score": 89,
+      "level": "Info",
+      "description": "表现良好：算法实现正确性",
+      "evidence_quote": "原文第2.3节提到：'算法实现正确性相关内容...'",
+      "location": {
+        "section": "2.3",
+        "line_start": 320
+      },
+      "suggestion": "可以进一步提升算法实现正确性"
+    },
+    {
+      "id": "item-4-002",
+      "point": "代码与描述一致性",
+      "score": 79,
+      "level": "Warning",
+      "description": "存在问题：代码与描述一致性",
+      "evidence_quote": "原文第4.2节提到：'代码与描述一致性相关内容...'",
+      "location": {
+        "section": "3.3",
+        "line_start": 5
+      },
+      "suggestion": "建议完善代码与描述一致性"
+    },
+    {
+      "id": "item-4-003",
+      "point": "算法实现正确性",
+      "score": 91,
+      "level": "Info",
+      "description": "符合规范：算法实现正确性",
+      "evidence_quote": "原文第4.4节提到：'算法实现正确性相关内容...'",
+      "location": {
+        "section": "6.5",
+        "line_start": 383
+      },
+      "suggestion": "继续保持"
+    },
+    {
+      "id": "item-4-004",
+      "point": "代码与描述一致性",
+      "score": 89,
+      "level": "Info",
+      "description": "表现良好：代码与描述一致性",
+      "evidence_quote": "原文第6.5节提到：'代码与描述一致性相关内容...'",
+      "location": {
+        "section": "3.4",
+        "line_start": 378
+      },
+      "suggestion": "保持当前水平"
+    },
+    {
+      "id": "item-4-005",
+      "point": "依赖管理",
+      "score": 95,
+      "level": "Info",
+      "description": "符合规范：依赖管理",
+      "evidence_quote": "原文第1.1节提到：'依赖管理相关内容...'",
+      "location": {
+        "section": "9.3",
+        "line_start": 320
+      },
+      "suggestion": "可以进一步提升依赖管理"
+    }
+  ],
+  "timestamp": "2026-03-06T18:23:15.868072"
+}

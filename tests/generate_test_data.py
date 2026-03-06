@@ -7,7 +7,7 @@ import random
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class TestDataGenerator:

@@ -1,0 +1,73 @@
+{
+  "group_id": 6,
+  "group_name": "文献真实性组",
+  "paper_id": "test_paper_002",
+  "audit_results": [
+    {
+      "id": "item-6-001",
+      "point": "参考文献真实性",
+      "score": 87,
+      "level": "Info",
+      "description": "表现良好：参考文献真实性",
+      "evidence_quote": "原文第9.2节提到：'参考文献真实性相关内容...'",
+      "location": {
+        "section": "10.1",
+        "line_start": 426
+      },
+      "suggestion": "可以进一步提升参考文献真实性"
+    },
+    {
+      "id": "item-6-002",
+      "point": "DOI有效性",
+      "score": 79,
+      "level": "Warning",
+      "description": "存在问题：DOI有效性",
+      "evidence_quote": "原文第2.2节提到：'DOI有效性相关内容...'",
+      "location": {
+        "section": "3.3",
+        "line_start": 144
+      },
+      "suggestion": "建议补充DOI有效性"
+    },
+    {
+      "id": "item-6-003",
+      "point": "参考文献真实性",
+      "score": 41,
+      "level": "Critical",
+      "description": "发现严重问题：参考文献真实性",
+      "evidence_quote": "原文第2.2节提到：'参考文献真实性相关内容...'",
+      "location": {
+        "section": "3.4",
+        "line_start": 155
+      },
+      "suggestion": "强烈建议重新审查参考文献真实性"
+    },
+    {
+      "id": "item-6-004",
+      "point": "参考文献真实性",
+      "score": 92,
+      "level": "Info",
+      "description": "基本合格：参考文献真实性",
+      "evidence_quote": "原文第10.5节提到：'参考文献真实性相关内容...'",
+      "location": {
+        "section": "1.2",
+        "line_start": 427
+      },
+      "suggestion": "继续保持"
+    },
+    {
+      "id": "item-6-005",
+      "point": "作者信息完整性",
+      "score": 85,
+      "level": "Info",
+      "description": "基本合格：作者信息完整性",
+      "evidence_quote": "原文第6.2节提到：'作者信息完整性相关内容...'",
+      "location": {
+        "section": "4.3",
+        "line_start": 50
+      },
+      "suggestion": "保持当前水平"
+    }
+  ],
+  "timestamp": "2026-03-06T18:23:15.875041"
+}
