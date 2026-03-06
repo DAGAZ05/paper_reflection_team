@@ -5,9 +5,26 @@
 import os
 import logging
 from typing import Optional, Dict, Any, List
+from pathlib import Path
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# 尝试加载.env文件
+try:
+    from dotenv import load_dotenv
+    # 查找.env文件（从当前文件向上查找到项目根目录）
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        logger.info(f"已加载.env文件: {env_path}")
+    else:
+        # 尝试从当前工作目录加载
+        load_dotenv()
+except ImportError:
+    logger.warning("未安装python-dotenv库，无法自动加载.env文件")
+except Exception as e:
+    logger.warning(f"加载.env文件失败: {e}")
 
 # DeepSeek API配置
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")

@@ -627,6 +627,24 @@ class ConflictResolver:
             else:
                 json_str = content
 
+            # 检查JSON是否被截断（响应达到max_tokens限制）
+            finish_reason = response.get("choices", [{}])[0].get("finish_reason", "")
+            if finish_reason == "length":
+                logger.warning("DeepSeek响应被截断（达到max_tokens限制），尝试补全JSON结构")
+                # 尝试补全JSON结构
+                json_str = json_str.rstrip()
+                # 统计未闭合的括号
+                open_braces = json_str.count('{') - json_str.count('}')
+                open_brackets = json_str.count('[') - json_str.count(']')
+
+                # 补全缺失的闭合符号
+                if open_brackets > 0:
+                    json_str += '\n' + '  ]' * open_brackets
+                if open_braces > 0:
+                    json_str += '\n' + '}' * open_braces
+
+                logger.info(f"已补全JSON结构: 添加了{open_brackets}个']'和{open_braces}个'}}'")
+
             # 保存原始JSON用于调试
             original_json_str = json_str
 
@@ -640,20 +658,59 @@ class ConflictResolver:
                 return fixed
 
             def repair_json_aggressive(json_text):
-                """激进JSON修复"""
-                # 移除所有可能的尾随逗号
-                fixed = re.sub(r',(\s*[}\]])', r'\1', json_text)
-                fixed = re.sub(r',\s*}', '}', fixed)
-                fixed = re.sub(r',\s*]', ']', fixed)
+                """激进JSON修复 - 逐行分析并修复"""
+                lines = json_text.split('\n')
+                fixed_lines = []
 
-                # 修复缺少逗号的情况
-                fixed = re.sub(r'"\s*\n\s*"', '",\n"', fixed)  # 字符串之间缺少逗号
-                fixed = re.sub(r'}\s*\n\s*{', '},\n{', fixed)  # 对象之间缺少逗号
-                fixed = re.sub(r']\s*\n\s*\[', '],\n[', fixed)  # 数组之间缺少逗号
+                for i, line in enumerate(lines):
+                    stripped = line.strip()
 
-                # 修复属性值后缺少逗号的情况
-                # 例如: "key": "value"\n  "key2" 应该是 "key": "value",\n  "key2"
-                fixed = re.sub(r'(["\d\]}])\s*\n\s*"', r'\1,\n"', fixed)
+                    # 跳过空行
+                    if not stripped:
+                        fixed_lines.append(line)
+                        continue
+
+                    # 检查下一行（如果存在）
+                    next_line_stripped = ""
+                    if i + 1 < len(lines):
+                        next_line_stripped = lines[i + 1].strip()
+
+                    # 当前行是值行（以"、数字、true、false、null、}、]结尾）
+                    # 且下一行是属性名，则需要添加逗号
+                    needs_comma = False
+
+                    if stripped and not stripped.endswith(','):
+                        # 检查当前行是否以值结尾
+                        ends_with_value = (
+                            stripped.endswith('"') or
+                            stripped.endswith('}') or
+                            stripped.endswith(']') or
+                            (len(stripped) > 0 and stripped[-1].isdigit()) or
+                            stripped.endswith('true') or
+                            stripped.endswith('false') or
+                            stripped.endswith('null')
+                        )
+
+                        # 检查下一行是否是新属性（以"开头）
+                        next_is_property = next_line_stripped.startswith('"')
+
+                        # 如果当前行以值结尾，下一行是新属性，则需要逗号
+                        if ends_with_value and next_is_property:
+                            needs_comma = True
+
+                    # 添加逗号
+                    if needs_comma:
+                        fixed_lines.append(line.rstrip() + ',')
+                    else:
+                        fixed_lines.append(line)
+
+                fixed = '\n'.join(fixed_lines)
+
+                # 移除尾随逗号（在}或]之前）
+                fixed = re.sub(r',(\s*[}\]])', r'\1', fixed)
+
+                # 移除连续逗号
+                fixed = re.sub(r',\s*,', ',', fixed)
 
                 # 移除注释（如果有）
                 fixed = re.sub(r'//.*?\n', '\n', fixed)
@@ -698,6 +755,14 @@ class ConflictResolver:
                     if attempt == 0:
                         logger.warning(f"JSON解析失败（尝试{attempt+1}/4）: {je}")
                         logger.debug(f"原始JSON前500字符: {original_json_str[:500]}")
+                        # 保存完整JSON到文件用于调试
+                        try:
+                            import tempfile
+                            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
+                                f.write(original_json_str)
+                                logger.info(f"完整JSON已保存到: {f.name}")
+                        except:
+                            pass
                     elif attempt < 3:
                         logger.warning(f"JSON解析失败（尝试{attempt+1}/4）: {je}")
                         # 显示错误位置附近的内容
@@ -712,9 +777,16 @@ class ConflictResolver:
                         # 显示错误位置附近的内容
                         lines = json_str.split('\n')
                         if je.lineno <= len(lines):
-                            error_line = lines[je.lineno - 1]
-                            logger.error(f"错误行内容: {error_line}")
-                            logger.error(f"错误位置: {' ' * (je.colno - 1)}^")
+                            # 显示错误行及其前后各2行
+                            start_line = max(0, je.lineno - 3)
+                            end_line = min(len(lines), je.lineno + 2)
+                            logger.error(f"错误位置上下文（第{start_line+1}-{end_line}行）:")
+                            for line_idx in range(start_line, end_line):
+                                prefix = ">>> " if line_idx == je.lineno - 1 else "    "
+                                logger.error(f"{prefix}{line_idx+1}: {lines[line_idx]}")
+                            if je.lineno - 1 < len(lines):
+                                error_line = lines[je.lineno - 1]
+                                logger.error(f"错误位置: {' ' * (je.colno + 3)}^")
                         raise
 
             usage = {
