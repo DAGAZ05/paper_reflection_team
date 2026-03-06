@@ -16,7 +16,6 @@ import argparse
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.db import db_manager
-from src.api import deepseek_client
 from src.common.models import ReflectionResult
 from src.common.report_generator import report_generator
 from src.conflict_resolution import ConflictResolver
@@ -137,49 +136,58 @@ class ReflectionOrchestrator:
             final_score = final_verdict.get("average_score", 70.0)
             verdict = final_verdict.get("verdict", "待定")
 
-            result = {
-                "paper_id": paper_id,
-                "paper_title": f"Paper_{paper_id}",  # 添加论文标题
-                "final_score": final_score,
-                "verdict": verdict,
-                "critical_issues": [issue.dict() for issue in critical_issues],
-                "major_issues": [issue.dict() for issue in major_issues],
-                "minor_issues": [issue.dict() for issue in minor_issues],
-                "needs_human_review": needs_human_review,
-                "human_review_reason": human_review_reason,
-                "mentor_dialogue": mentor_dialogue.dict() if mentor_dialogue else None,
-                "metadata": {
+            # 使用 ReflectionResult 模型
+            result = ReflectionResult(
+                paper_id=paper_id,
+                final_score=final_score,
+                verdict=verdict,
+                critical_issues=critical_issues,
+                major_issues=major_issues,
+                minor_issues=minor_issues,
+                needs_human_review=needs_human_review,
+                human_review_reason=human_review_reason,
+                mentor_dialogue=mentor_dialogue,
+                plugin_metadata={
+                    "paper_title": f"Paper_{paper_id}",
                     "conflict_resolution": conflict_response.result,
                     "review_marks_count": len(review_marks),
                     "sorted_results_count": len(sorted_results)
                 }
-            }
+            )
 
             # 步骤7: 生成Markdown报告
             logger.info("步骤7: 生成Markdown报告")
+            markdown_report_path = None
             try:
+                # 将 ReflectionResult 转换为字典用于报告生成
+                result_dict = result.model_dump()
+                result_dict["paper_title"] = result.plugin_metadata.get("paper_title", f"Paper_{paper_id}")
+
                 report_path = report_generator.generate_report(
                     paper_id=paper_id,
-                    paper_title=result.get("paper_title", f"Paper_{paper_id}"),
-                    result=result
+                    paper_title=result_dict["paper_title"],
+                    result=result_dict
                 )
-                result["markdown_report_path"] = report_path
+                markdown_report_path = report_path
                 logger.info(f"Markdown报告已保存: {report_path}")
             except Exception as e:
                 logger.error(f"生成Markdown报告失败: {e}")
-                result["markdown_report_path"] = None
+
+            # 将报告路径添加到 plugin_metadata
+            if markdown_report_path:
+                result.plugin_metadata["markdown_report_path"] = markdown_report_path
 
             logger.info(f"论文{paper_id}处理完成: 最终得分={final_score}, 结论={verdict}")
             return result
 
         except Exception as e:
             logger.error(f"处理论文{paper_id}时发生错误: {e}", exc_info=True)
-            return {
-                "paper_id": paper_id,
-                "error": str(e),
-                "final_score": 0,
-                "verdict": "处理失败"
-            }
+            return ReflectionResult(
+                paper_id=paper_id,
+                final_score=0.0,
+                verdict="处理失败",
+                plugin_metadata={"error": str(e)}
+            )
 
     async def run_from_database(self, paper_id: Optional[str] = None):
         """
@@ -226,23 +234,24 @@ class ReflectionOrchestrator:
                 result = await self.process_paper(pid, paper_audits.get(pid, []), paper_content)
 
                 # 保存结果到数据库
-                if "error" not in result:
+                if "error" not in result.plugin_metadata:
                     await db_manager.save_reflection_result(
                         paper_id=pid,
-                        final_score=result["final_score"],
-                        verdict=result["verdict"],
-                        result_json=result
+                        final_score=result.final_score,
+                        verdict=result.verdict,
+                        result_json=result.model_dump()
                     )
 
                 # 打印结果摘要
                 print(f"\n论文ID: {pid}")
-                print(f"最终得分: {result.get('final_score', 'N/A')}")
-                print(f"评审结论: {result.get('verdict', 'N/A')}")
-                print(f"是否需要人工复核: {result.get('needs_human_review', False)}")
-                if result.get('human_review_reason'):
-                    print(f"复核原因: {result['human_review_reason']}")
-                if result.get('markdown_report_path'):
-                    print(f"📄 Markdown报告: {result['markdown_report_path']}")
+                print(f"最终得分: {result.final_score}")
+                print(f"评审结论: {result.verdict}")
+                print(f"是否需要人工复核: {result.needs_human_review}")
+                if result.human_review_reason:
+                    print(f"复核原因: {result.human_review_reason}")
+                markdown_path = result.plugin_metadata.get("markdown_report_path")
+                if markdown_path:
+                    print(f"📄 Markdown报告: {markdown_path}")
 
         except Exception as e:
             logger.error(f"从数据库读取处理失败: {e}", exc_info=True)
@@ -301,16 +310,17 @@ class ReflectionOrchestrator:
             # 保存结果到文件
             output_file = prompts_path / f"result_{paper_id}.json"
             with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(result, f, ensure_ascii=False, indent=2)
+                json.dump(result.model_dump(), f, ensure_ascii=False, indent=2)
             logger.info(f"结果已保存到: {output_file}")
 
             # 打印结果摘要
             print(f"\n论文ID: {paper_id}")
-            print(f"最终得分: {result.get('final_score', 'N/A')}")
-            print(f"评审结论: {result.get('verdict', 'N/A')}")
-            print(f"是否需要人工复核: {result.get('needs_human_review', False)}")
-            if result.get('markdown_report_path'):
-                print(f"📄 Markdown报告: {result['markdown_report_path']}")
+            print(f"最终得分: {result.final_score}")
+            print(f"评审结论: {result.verdict}")
+            print(f"是否需要人工复核: {result.needs_human_review}")
+            markdown_path = result.plugin_metadata.get("markdown_report_path")
+            if markdown_path:
+                print(f"📄 Markdown报告: {markdown_path}")
 
 
 async def main():
