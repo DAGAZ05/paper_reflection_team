@@ -5,56 +5,30 @@
   "audit_results": [
     {
       "id": "item-5-001",
-      "point": "统计学显著性检验",
-      "score": 83,
-      "level": "Info",
-      "description": "基本合格：统计学显著性检验",
-      "evidence_quote": "原文第8.1节提到：'统计学显著性检验相关内容...'",
+      "point": "样本量充足性",
+      "score": 65,
+      "level": "Warning",
+      "description": "存在问题：样本量充足性",
+      "evidence_quote": "原文第3.4节提到：'样本量充足性相关内容...'",
       "location": {
-        "section": "8.4",
-        "line_start": 485
+        "section": "3.3",
+        "line_start": 498
       },
-      "suggestion": "继续保持"
+      "suggestion": "建议优化样本量充足性"
     },
     {
       "id": "item-5-002",
-      "point": "数据分布合理性",
-      "score": 62,
-      "level": "Warning",
-      "description": "建议改进：数据分布合理性",
-      "evidence_quote": "原文第7.1节提到：'数据分布合理性相关内容...'",
-      "location": {
-        "section": "7.2",
-        "line_start": 57
-      },
-      "suggestion": "建议完善数据分布合理性"
-    },
-    {
-      "id": "item-5-003",
       "point": "图表数据一致性",
-      "score": 92,
+      "score": 81,
       "level": "Info",
-      "description": "符合规范：图表数据一致性",
-      "evidence_quote": "原文第3.5节提到：'图表数据一致性相关内容...'",
+      "description": "基本合格：图表数据一致性",
+      "evidence_quote": "原文第8.4节提到：'图表数据一致性相关内容...'",
       "location": {
-        "section": "10.2",
-        "line_start": 341
+        "section": "6.3",
+        "line_start": 118
       },
-      "suggestion": "继续保持"
-    },
-    {
-      "id": "item-5-004",
-      "point": "统计学显著性检验",
-      "score": 74,
-      "level": "Warning",
-      "description": "建议改进：统计学显著性检验",
-      "evidence_quote": "原文第7.2节提到：'统计学显著性检验相关内容...'",
-      "location": {
-        "section": "2.2",
-        "line_start": 401
-      },
-      "suggestion": "建议完善统计学显著性检验"
+      "suggestion": "可以进一步提升图表数据一致性"
     }
   ],
-  "timestamp": "2026-03-06T20:26:35.629438"
+  "timestamp": "2026-03-07T19:25:15.865839"
 }

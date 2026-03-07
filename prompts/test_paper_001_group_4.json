@@ -5,56 +5,30 @@
   "audit_results": [
     {
       "id": "item-4-001",
-      "point": "依赖管理",
-      "score": 85,
+      "point": "README完整性",
+      "score": 82,
       "level": "Info",
-      "description": "符合规范：依赖管理",
-      "evidence_quote": "原文第6.5节提到：'依赖管理相关内容...'",
+      "description": "表现良好：README完整性",
+      "evidence_quote": "原文第2.2节提到：'README完整性相关内容...'",
       "location": {
-        "section": "1.3",
-        "line_start": 119
+        "section": "4.4",
+        "line_start": 47
       },
-      "suggestion": "可以进一步提升依赖管理"
+      "suggestion": "保持当前水平"
     },
     {
       "id": "item-4-002",
-      "point": "代码与描述一致性",
-      "score": 81,
+      "point": "依赖管理",
+      "score": 86,
       "level": "Info",
-      "description": "表现良好：代码与描述一致性",
-      "evidence_quote": "原文第1.1节提到：'代码与描述一致性相关内容...'",
+      "description": "符合规范：依赖管理",
+      "evidence_quote": "原文第5.3节提到：'依赖管理相关内容...'",
       "location": {
-        "section": "5.5",
-        "line_start": 21
+        "section": "2.2",
+        "line_start": 298
       },
-      "suggestion": "可以进一步提升代码与描述一致性"
-    },
-    {
-      "id": "item-4-003",
-      "point": "代码规范性",
-      "score": 55,
-      "level": "Critical",
-      "description": "致命错误：代码规范性",
-      "evidence_quote": "原文第3.3节提到：'代码规范性相关内容...'",
-      "location": {
-        "section": "5.3",
-        "line_start": 404
-      },
-      "suggestion": "需要彻底修改代码规范性"
-    },
-    {
-      "id": "item-4-004",
-      "point": "README完整性",
-      "score": 88,
-      "level": "Info",
-      "description": "基本合格：README完整性",
-      "evidence_quote": "原文第8.3节提到：'README完整性相关内容...'",
-      "location": {
-        "section": "2.5",
-        "line_start": 408
-      },
-      "suggestion": "继续保持"
+      "suggestion": "保持当前水平"
     }
   ],
-  "timestamp": "2026-03-06T20:26:35.629438"
+  "timestamp": "2026-03-07T19:25:15.865839"
 }

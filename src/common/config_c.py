@@ -34,11 +34,19 @@ class DialogueConfig(BaseModel):
         "理论计算机": "图灵奖提名者，强调形式化证明严谨性"
     }
 
+class ConflictResolutionConfig(BaseModel):
+    """冲突裁决配置"""
+    always_use_llm: bool = False  # 是否始终使用LLM裁决（纯LLM-as-a-Judge模式）
+    score_diff_threshold: int = 20  # 分数差异阈值
+    conflict_threshold: float = 0.7  # 冲突置信度阈值
+    enable_semantic_conflict: bool = True  # 是否启用语义冲突检测
+
 class Settings(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
     llm: LLMConfig = LLMConfig()
     evidence: EvidenceValidationConfig = EvidenceValidationConfig()
     dialogue: DialogueConfig = DialogueConfig()
+    conflict_resolution: ConflictResolutionConfig = ConflictResolutionConfig()
     debug: bool = False
 
     class Config:

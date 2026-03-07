@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.db.database import db_manager
 from src.api.deepseek_client import deepseek_client
 from src.common.models import ConflictResolutionRequest, ConflictResolutionResponse, ConflictType
+from src.common.config_c import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +25,12 @@ LEVEL_PRIORITY = {"Info": 0, "Warning": 1, "Critical": 2}
 
 
 class ConflictResolver:
-    def __init__(self, mode: str = "database"):
+    def __init__(self, mode: str = "database", always_use_llm: Optional[bool] = None):
         # 使用统一的DeepSeek客户端和数据库管理器
         self.llm_client = deepseek_client
         self.db_client = db_manager
+        # 从配置或参数获取always_use_llm设置
+        self.always_use_llm = always_use_llm if always_use_llm is not None else settings.conflict_resolution.always_use_llm
         self.mode = mode  # "database" or "file"
         self.conflict_patterns = self._load_conflict_patterns()
         # 审计组权重配置（根据重要性调整）
@@ -1131,7 +1134,9 @@ class ConflictResolver:
                 score_diff_threshold=request.config.get("score_diff_threshold"),
             )
 
-            if not conflicts:
+            # 如果启用了always_use_llm模式，即使没有冲突也调用LLM
+            if not conflicts and not self.always_use_llm:
+                logger.info("无冲突且未启用always_use_llm模式，使用快速路径")
                 result_data = {
                     "conflicts_resolved": False,
                     "resolved_issues": [],
@@ -1158,6 +1163,10 @@ class ConflictResolver:
                     usage={"tokens": 0, "latency_ms": 50},
                 )
 
+            # 调用LLM进行裁决（有冲突或启用了always_use_llm模式）
+            if self.always_use_llm and not conflicts:
+                logger.info("启用always_use_llm模式，即使无冲突也调用LLM进行综合评估")
+
             resolution_data, usage = await self.resolve_conflicts_with_llm(request, conflicts, paper_context)
             resolution_data = self._normalize_resolution_data(resolution_data)
 
@@ -1179,9 +1188,10 @@ class ConflictResolver:
 
             if paper_id:
                 resolution_data["paper_id"] = paper_id
+                # 注意：不在这里保存到数据库，由run.py统一处理
                 # 仅在database模式下保存到数据库
-                if self.mode == "database":
-                    await self.db_client.save_reflection_result(request.request_id, resolution_data, usage)
+                # if self.mode == "database":
+                #     await self.db_client.save_reflection_result(request.request_id, resolution_data, usage)
 
             return ConflictResolutionResponse(
                 request_id=request.request_id,

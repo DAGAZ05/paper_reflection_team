@@ -44,9 +44,30 @@ class DeepSeekClient:
         self.api_key = api_key or DEEPSEEK_API_KEY
         self.base_url = base_url or DEEPSEEK_BASE_URL
         self.model = model or DEEPSEEK_MODEL
+        self._client: Optional[httpx.AsyncClient] = None
 
         if not self.api_key:
             logger.warning("DeepSeek API密钥未设置，请设置环境变量DEEPSEEK_API_KEY")
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """获取或创建HTTP客户端"""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(timeout=60.0)
+        return self._client
+
+    async def close(self):
+        """关闭HTTP客户端"""
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
+            self._client = None
+
+    async def __aenter__(self):
+        """支持异步上下文管理器"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """退出时自动关闭客户端"""
+        await self.close()
 
     async def chat_completion(
         self,
@@ -85,13 +106,13 @@ class DeepSeekClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(url, json=payload, headers=headers)
-                response.raise_for_status()
-                result = response.json()
+            client = await self._get_client()
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            result = response.json()
 
-                logger.info(f"DeepSeek API调用成功，使用tokens: {result.get('usage', {})}")
-                return result
+            logger.info(f"DeepSeek API调用成功，使用tokens: {result.get('usage', {})}")
+            return result
 
         except httpx.HTTPStatusError as e:
             logger.error(f"DeepSeek API调用失败: HTTP {e.response.status_code}")
