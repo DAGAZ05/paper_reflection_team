@@ -137,7 +137,7 @@ class EvidenceValidator:
         para_vecs = vectors[:-1]
         target_vec = vectors[-1]
 
-        from .utils import cosine_sim
+        from src.common.utils_b import cosine_sim
 
         sims = [cosine_sim(target_vec, v) for v in para_vecs]
         top_indices = argmax_topk(sims, self.config.top_k)

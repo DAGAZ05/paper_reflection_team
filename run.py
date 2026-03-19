@@ -1,8 +1,16 @@
 """
 反思评估组主运行程序
 支持两种运行方案：
-1. 从PostgreSQL数据库读取agent_audits表
+1. 从PostgreSQL数据库读取agent_audit_result表
 2. 从prompts文件夹读取JSON文件
+
+Week3更新：
+- 输入表从agent_audits改为agent_audit_result
+- 输出表从agent_audits改为reflect_agent_verdict
+- 从数据库读取评审规则（main_rules + rule_judge）
+- 自动检查4个审计组是否齐全
+- 自动检查是否已评估/需要重新评估
+- 支持--paper-id强制评估（忽略审计组不全）
 """
 import asyncio
 import json
@@ -87,7 +95,8 @@ def custom_exception_handler(loop, context):
 class ReflectionOrchestrator:
     """反思评估编排器"""
 
-    def __init__(self, mode: str = "database", enable_dialogue: bool = False, always_use_llm: bool = False):
+    def __init__(self, mode: str = "database", enable_dialogue: bool = False,
+                 always_use_llm: bool = False, enable_hallucination_filter: bool = True):
         self.conflict_resolver = None
         self.deduplicator = None
         self.evidence_validator = None
@@ -96,11 +105,15 @@ class ReflectionOrchestrator:
         self.mode = mode  # "database" or "file"
         self.enable_dialogue = enable_dialogue  # 是否启用导师对话生成
         self.always_use_llm = always_use_llm  # 是否始终使用LLM裁决
+        self.enable_hallucination_filter = enable_hallucination_filter  # 是否启用幻觉过滤（证据验证）
 
     def initialize_modules(self):
         """初始化各模块（延迟初始化以避免导入错误）"""
         try:
-            self.conflict_resolver = ConflictResolver(mode=self.mode, always_use_llm=self.always_use_llm)
+            self.conflict_resolver = ConflictResolver(
+                mode=self.mode, always_use_llm=self.always_use_llm,
+                enable_hallucination_filter=self.enable_hallucination_filter
+            )
             self.deduplicator = Deduplicator()
             self.evidence_validator = EvidenceValidator()
             self.dialogue_engine = DialogueEngine()
@@ -116,25 +129,57 @@ class ReflectionOrchestrator:
         self,
         paper_id: str,
         audit_results: List[Dict[str, Any]],
-        paper_content: Optional[str] = None
+        paper_content: Optional[str] = None,
+        rules_dict: Optional[Dict[str, Any]] = None,
+        incomplete_note: str = "",
+        paper_name: Optional[str] = None,
+        audit_records: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         处理单篇论文的评审
 
         Args:
             paper_id: 论文ID
-            audit_results: 5个审计组的结果列表
+            audit_results: 审计组的结果列表（按agent_code分组的result_json）
             paper_content: 论文内容（用于证据验证）
+            rules_dict: 评审规则字典（从数据库读取）
+            incomplete_note: 审计组不全的提示信息
+            paper_name: 论文题目
+            audit_records: 原始审计记录（用于计算initial_score和构建suggestions）
 
         Returns:
             反思评估结果
         """
         logger.info(f"开始处理论文: {paper_id}")
+        paper_title = paper_name or f"Paper_{paper_id}"
 
         try:
-            # 验证输入：确保有5个审计组的结果
-            if len(audit_results) != 5:
-                logger.warning(f"论文{paper_id}的审计结果数量不足5个，实际为{len(audit_results)}个")
+            # 验证输入：确保有4个审计组的结果（FMT/REF/EXP/LOG）
+            if len(audit_results) < 4:
+                logger.warning(f"论文{paper_id}的审计结果数量不足4个，实际为{len(audit_results)}个")
+
+            # ========== 计算 initial_score ==========
+            # initial_score = 各审计agent不同rule的score_obtained之和
+            initial_score = 0.0
+            total_full_score = 0.0
+            if audit_records:
+                for rec in audit_records:
+                    score_val = rec.get("score_obtained")
+                    if score_val is not None:
+                        try:
+                            initial_score += float(score_val)
+                        except (TypeError, ValueError):
+                            pass
+                    # 累加满分用于归一化
+                    rule_id = rec.get("rule_id", "")
+                    if rules_dict and rule_id in rules_dict:
+                        fs = rules_dict[rule_id].get("full_score")
+                        if fs is not None:
+                            try:
+                                total_full_score += float(fs)
+                            except (TypeError, ValueError):
+                                pass
+            logger.info(f"initial_score(原始得分和)={initial_score}, total_full_score={total_full_score}")
 
             # 步骤1：优先级排序和复核标记
             logger.info("步骤1: 优先级排序和复核标记")
@@ -145,18 +190,61 @@ class ReflectionOrchestrator:
             from src.common.models import ConflictResolutionRequest
 
             conflict_request = ConflictResolutionRequest(
-                metadata={"paper_id": paper_id, "paper_title": f"Paper_{paper_id}"},
+                metadata={"paper_id": paper_id, "paper_title": paper_title},
                 payload={"agent_results": audit_results}
             )
             conflict_response = await self.conflict_resolver.resolve_conflicts(conflict_request)
 
-            # 步骤3: 提取优先级问题
+            # ========== 计算 conflict_penalty ==========
+            resolved_issues = conflict_response.result.get("resolved_issues", [])
+            conflict_penalty = 0.0
+            for issue in resolved_issues:
+                level = issue.get("final_level", "Info")
+                if level == "Critical":
+                    conflict_penalty += 5.0
+                elif level == "Warning":
+                    conflict_penalty += 2.0
+                # Info不扣分
+            logger.info(f"conflict_penalty={conflict_penalty}")
+
+            # ========== 计算 final_score ==========
+            # 归一化到100分制
+            if total_full_score > 0:
+                normalized_score = (initial_score / total_full_score) * 100.0
+            else:
+                # 无满分信息时，使用conflict_resolver的加权平均分
+                final_verdict_data = conflict_response.result.get("final_verdict", {})
+                normalized_score = final_verdict_data.get("average_score", 70.0)
+
+            # 扣除冲突惩罚
+            final_score = max(0.0, normalized_score - conflict_penalty)
+
+            # 证据验证调整（仅在启用幻觉过滤时）
+            evidence_validation = conflict_response.result.get("evidence_validation", {})
+            if self.enable_hallucination_filter and evidence_validation:
+                validation_score = evidence_validation.get("validation_score", 1.0)
+                if validation_score < 0.7:
+                    # 权重提高：验证分数越低扣分越重，最多扣15分
+                    ev_penalty = (0.7 - validation_score) * 20
+                    final_score = max(0.0, final_score - ev_penalty)
+                    logger.info(f"证据验证扣分: -{ev_penalty:.1f} (validation_score={validation_score:.2f})")
+                elif validation_score > 0.9:
+                    ev_bonus = (validation_score - 0.9) * 10  # 最多加1分
+                    final_score = min(100.0, final_score + ev_bonus)
+                    logger.info(f"证据验证加分: +{ev_bonus:.1f} (validation_score={validation_score:.2f})")
+            elif not self.enable_hallucination_filter:
+                logger.info("幻觉过滤已禁用，不纳入证据验证调整")
+
+            final_score = round(final_score, 1)
+            logger.info(f"final_score={final_score} (normalized={normalized_score:.1f}, penalty={conflict_penalty})")
+
+            # 步骤3: 提取优先级问题（来自冲突裁决）
             logger.info("步骤3: 提取优先级问题")
             critical_issues = []
             major_issues = []
             minor_issues = []
 
-            for issue in conflict_response.result.get("resolved_issues", []):
+            for issue in resolved_issues:
                 from src.common.models import PrioritizedIssue
                 priority_issue = PrioritizedIssue(
                     description=issue.get("resolved_comment", ""),
@@ -171,6 +259,42 @@ class ReflectionOrchestrator:
                     major_issues.append(priority_issue)
                 else:
                     minor_issues.append(priority_issue)
+
+            # 步骤3.5: 从原始审计记录中补充审计建议到issues列表
+            if audit_records:
+                for rec in audit_records:
+                    suggestion = rec.get("audit_suggestion", "")
+                    if not suggestion or not suggestion.strip():
+                        continue
+                    is_compliant = rec.get("is_compliant")
+                    agent_code = rec.get("agent_code", "")
+                    rule_id = rec.get("rule_id", "")
+                    score_obtained = rec.get("score_obtained", 0)
+
+                    # 确定优先级
+                    rule_info = rules_dict.get(rule_id, {}) if rules_dict else {}
+                    severity = rule_info.get("severity", "")
+                    full_score = rule_info.get("full_score", 0)
+                    rule_name = rule_info.get("rule_name_cn", rule_id)
+
+                    # 不合规的条目才作为issue
+                    if is_compliant:
+                        continue
+
+                    from src.common.models import PrioritizedIssue
+                    issue_item = PrioritizedIssue(
+                        description=f"[{rule_name}] {suggestion}",
+                        priority="critical" if severity == "CRITICAL" else ("warning" if severity == "MAJOR" else "info"),
+                        agents=[agent_code],
+                        evidence=f"得分: {score_obtained}/{full_score}" if full_score else f"得分: {score_obtained}"
+                    )
+
+                    if severity == "CRITICAL":
+                        critical_issues.append(issue_item)
+                    elif severity == "MAJOR":
+                        major_issues.append(issue_item)
+                    else:
+                        minor_issues.append(issue_item)
 
             # 步骤4: 生成导师对话（可选）
             mentor_dialogue = None
@@ -193,9 +317,21 @@ class ReflectionOrchestrator:
                 human_review_reason = "; ".join(reasons)
 
             # 步骤6: 构建最终结果
-            final_verdict = conflict_response.result.get("final_verdict", {})
-            final_score = final_verdict.get("average_score", 70.0)
-            verdict = final_verdict.get("verdict", "待定")
+            # 根据final_score和issues确定verdict文本
+            if any(i.priority == "critical" for i in critical_issues):
+                verdict = "存在关键问题，建议大修后重新提交（Major Revision）"
+            elif len(major_issues) >= 3:
+                verdict = "存在多处需要关注的问题，建议修改后录用（Minor Revision with conditions）"
+            elif len(major_issues) > 0:
+                verdict = "存在少量问题，建议小修后录用（Minor Revision）"
+            elif final_score >= 85:
+                verdict = "论文质量良好，建议直接录用（Accept）"
+            else:
+                verdict = "论文基本合格，建议小修后录用（Minor Revision）"
+
+            # 如果审计组不全，在verdict中说明
+            if incomplete_note:
+                verdict = f"{incomplete_note} {verdict}"
 
             # 使用 ReflectionResult 模型
             result = ReflectionResult(
@@ -209,8 +345,12 @@ class ReflectionOrchestrator:
                 human_review_reason=human_review_reason,
                 mentor_dialogue=mentor_dialogue,
                 plugin_metadata={
-                    "paper_title": f"Paper_{paper_id}",
+                    "paper_title": paper_title,
                     "conflict_resolution": conflict_response.result,
+                    "initial_score": initial_score,
+                    "total_full_score": total_full_score,
+                    "conflict_penalty": conflict_penalty,
+                    "evidence_validation": evidence_validation,
                     "review_marks_count": len(review_marks),
                     "sorted_results_count": len(sorted_results),
                     "usage_tokens": conflict_response.usage.get("tokens", 0),
@@ -224,7 +364,7 @@ class ReflectionOrchestrator:
             try:
                 # 将 ReflectionResult 转换为字典用于报告生成
                 result_dict = result.model_dump()
-                result_dict["paper_title"] = result.plugin_metadata.get("paper_title", f"Paper_{paper_id}")
+                result_dict["paper_title"] = paper_title
 
                 report_path = report_generator.generate_report(
                     paper_id=paper_id,
@@ -240,7 +380,7 @@ class ReflectionOrchestrator:
             if markdown_report_path:
                 result.plugin_metadata["markdown_report_path"] = markdown_report_path
 
-            logger.info(f"论文{paper_id}处理完成: 最终得分={final_score}, 结论={verdict}")
+            logger.info(f"论文{paper_id}处理完成: initial_score={initial_score}, conflict_penalty={conflict_penalty}, final_score={final_score}, 结论={verdict}")
             return result
 
         except Exception as e:
@@ -256,14 +396,25 @@ class ReflectionOrchestrator:
         """
         方案1: 从数据库读取并处理
 
+        逻辑：
+        - 若指定paper_id：强制评估（即使4个审计组不全，但会提醒）
+        - 若未指定paper_id：遍历所有paper_id，仅处理4个审计组齐全且未评估/需重新评估的论文
+
         Args:
             paper_id: 指定论文ID，如果为None则处理所有论文
         """
-        logger.info("=== 方案1: 从数据库读取 ===")
+        logger.info("=== 方案1: 从数据库读取（agent_audit_result表） ===")
 
         try:
             # 连接数据库
             await db_manager.connect()
+
+            # 从数据库读取评审规则
+            rules = await db_manager.fetch_rules()
+            logger.info(f"已加载{len(rules)}条评审规则")
+
+            # 构建规则字典（按rule_id索引）
+            rules_dict = {r["rule_id"]: r for r in rules}
 
             # 获取待处理的论文ID列表
             if paper_id:
@@ -271,64 +422,195 @@ class ReflectionOrchestrator:
             else:
                 paper_ids = await db_manager.get_paper_ids()
 
-            logger.info(f"找到{len(paper_ids)}篇待处理论文")
+            logger.info(f"找到{len(paper_ids)}篇论文")
+
+            processed_count = 0
+            skipped_count = 0
 
             # 处理每篇论文
             for pid in paper_ids:
                 logger.info(f"\n{'='*60}")
-                logger.info(f"处理论文: {pid}")
+                logger.info(f"检查论文: {pid}")
                 logger.info(f"{'='*60}")
 
-                # 读取该论文的所有审计结果
-                audit_records = await db_manager.fetch_agent_audits(pid)
+                # 检查4个审计组是否齐全
+                has_all, existing_codes = await db_manager.check_paper_has_all_agents(pid)
+                missing_codes = list({"FMT", "REF", "EXP", "LOG"} - set(existing_codes))
 
-                # 过滤掉反思评估组的结果，只保留5个审计组的结果
-                audit_records = [
-                    record for record in audit_records
-                    if record.get("agent_name") != "反思评估组"
-                ]
+                force_mode = (paper_id is not None)  # 指定paper_id时为强制模式
 
-                logger.info(f"过滤后剩余{len(audit_records)}条审计组结果")
+                if not has_all:
+                    if force_mode:
+                        # 强制模式：提醒但继续
+                        print(f"\n[警告] 论文{pid}的审计组不全，缺少: {', '.join(missing_codes)}")
+                        print(f"  已有审计组: {', '.join(existing_codes)}")
+                        print(f"  强制模式下继续评估，结果可能不完整。")
+                        logger.warning(f"论文{pid}审计组不全（缺少{missing_codes}），强制模式下继续评估")
+                    else:
+                        # 自动模式：跳过
+                        logger.info(f"论文{pid}审计组不全（缺少{missing_codes}），跳过")
+                        skipped_count += 1
+                        continue
 
-                # 提取result_json作为审计结果列表
-                audit_results = [record["result_json"] for record in audit_records]
+                # 自动模式下额外检查：每个agent是否已应用所有规则
+                if not force_mode:
+                    rules_complete, rules_detail = await db_manager.check_paper_has_all_rules(pid)
+                    if not rules_complete:
+                        missing_info = []
+                        for ac, detail in rules_detail.items():
+                            if detail["missing_count"] > 0:
+                                missing_info.append(f"{ac}缺少{detail['missing_count']}条规则")
+                        logger.info(f"论文{pid}规则未全部应用（{', '.join(missing_info)}），跳过")
+                        skipped_count += 1
+                        continue
 
-                # 提取task_id（使用第一个记录的task_id）
-                task_id = audit_records[0].get("task_id") if audit_records else None
+                # 检查是否需要评估
+                if not force_mode:
+                    needs_eval = await db_manager.check_needs_reevaluation(pid)
+                    if not needs_eval:
+                        logger.info(f"论文{pid}已评估且无更新，跳过")
+                        skipped_count += 1
+                        continue
 
-                # 如果没有找到task_id，生成一个新的UUID格式
-                if task_id is None:
-                    import uuid
-                    task_id = str(uuid.uuid4())
+                # 读取该论文的所有审计结果（按rule_id去重，保留最新时间戳）
+                audit_records = await db_manager.fetch_audit_results(pid, dedup_by_rule=True)
+                logger.info(f"读取到{len(audit_records)}条审计结果（已去重）")
+
+                # 从result_json中提取审计结果，按agent_code分组
+                audit_results_by_agent = {}
+                paper_name = None
+                for record in audit_records:
+                    agent_code = record.get("agent_code", "")
+                    if not paper_name:
+                        paper_name = record.get("paper_name")
+
+                    result_json = record.get("result_json", {})
+                    if isinstance(result_json, dict) and "audit_results" in result_json:
+                        # result_json包含完整的审计结果
+                        if agent_code not in audit_results_by_agent:
+                            audit_results_by_agent[agent_code] = result_json
+                        else:
+                            # 合并同一agent_code的多条记录
+                            existing = audit_results_by_agent[agent_code]
+                            existing["audit_results"].extend(result_json.get("audit_results", []))
+                    else:
+                        # result_json不含audit_results，从行级字段构建
+                        if agent_code not in audit_results_by_agent:
+                            audit_results_by_agent[agent_code] = {
+                                "agent_code": agent_code,
+                                "audit_results": []
+                            }
+                        # 从行级字段构建单条审计结果
+                        rule_info = rules_dict.get(record.get("rule_id", ""), {})
+                        audit_item = {
+                            "result_id": record.get("result_id", ""),
+                            "paper_id": pid,
+                            "point": rule_info.get("rule_name_cn", record.get("rule_id", "")),
+                            "rule_id": record.get("rule_id", ""),
+                            "score": record.get("score_obtained", 0),
+                            "level": "Critical" if rule_info.get("severity") == "CRITICAL" else "Warning",
+                            "description": record.get("audit_suggestion", ""),
+                            "evidence_quote": "",
+                            "location": {},
+                            "suggestion": record.get("audit_suggestion", ""),
+                        }
+                        # 如果result_json有额外字段，合并
+                        if isinstance(result_json, dict):
+                            audit_item.update({
+                                k: v for k, v in result_json.items()
+                                if k in ("evidence_quote", "location", "description", "suggestion", "point", "level", "score")
+                            })
+                        audit_results_by_agent[agent_code]["audit_results"].append(audit_item)
+
+                # 将分组结果转为列表
+                audit_results = list(audit_results_by_agent.values())
+                logger.info(f"按agent_code分组后有{len(audit_results)}个审计组的结果")
 
                 # 获取论文内容
                 paper_content = await db_manager.get_paper_content(pid)
 
-                # 处理论文
-                result = await self.process_paper(pid, audit_results, paper_content)
+                # 构建不全审计组的提示信息
+                incomplete_note = ""
+                if not has_all:
+                    incomplete_note = f"[注意] 审计组不全（缺少{', '.join(missing_codes)}），评估结果可能不完整。"
 
-                # 保存结果到数据库
+                # 处理论文
+                result = await self.process_paper(
+                    pid, audit_results, paper_content,
+                    rules_dict=rules_dict,
+                    incomplete_note=incomplete_note,
+                    paper_name=paper_name,
+                    audit_records=audit_records
+                )
+
+                # 保存结果到数据库（reflect_agent_verdict表）
                 if "error" not in result.plugin_metadata:
-                    await db_manager.save_reflection_result(
-                        paper_id=pid,
-                        task_id=task_id,
-                        final_score=result.final_score,
-                        verdict=result.verdict,
-                        result_json=result.model_dump(),
-                        usage_tokens=result.plugin_metadata.get("usage_tokens", 0),
-                        latency_ms=result.plugin_metadata.get("latency_ms", 0)
+                    # 从plugin_metadata中获取已计算好的分数
+                    initial_score = result.plugin_metadata.get("initial_score", 0.0)
+                    conflict_penalty = result.plugin_metadata.get("conflict_penalty", 0.0)
+                    conflict_data = result.plugin_metadata.get("conflict_resolution", {})
+
+                    # 构建去重后建议（filtered_suggestions）：所有issues
+                    all_issues = []
+                    for issue in result.critical_issues + result.major_issues + result.minor_issues:
+                        issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
+                        all_issues.append(issue_dict)
+
+                    # 去重：按description去重
+                    seen_descs = set()
+                    deduped_issues = []
+                    for iss in all_issues:
+                        desc = iss.get("description", "")
+                        if desc and desc not in seen_descs:
+                            seen_descs.add(desc)
+                            deduped_issues.append(iss)
+
+                    # 构建优先级排序后建议（prioritized_suggestions）：
+                    # 仅保留critical和warning级别，按优先级排序
+                    priority_order = {"critical": 0, "warning": 1, "error": 1, "info": 2}
+                    high_priority_issues = [
+                        iss for iss in deduped_issues
+                        if iss.get("priority", "info") in ("critical", "warning", "error")
+                    ]
+                    prioritized = sorted(
+                        high_priority_issues,
+                        key=lambda x: priority_order.get(x.get("priority", "info"), 99)
                     )
+
+                    final_verdict_text = result.verdict
+
+                    await db_manager.save_verdict(
+                        paper_id=pid,
+                        paper_name=paper_name or f"Paper_{pid}",
+                        initial_score=initial_score,
+                        conflict_resolution=json.dumps(conflict_data, ensure_ascii=False, default=str) if conflict_data else None,
+                        conflict_penalty=conflict_penalty,
+                        final_score=result.final_score,
+                        filtered_suggestions=deduped_issues,
+                        prioritized_suggestions=prioritized,
+                        final_verdict=final_verdict_text,
+                    )
+
+                processed_count += 1
 
                 # 打印结果摘要
                 print(f"\n论文ID: {pid}")
-                print(f"最终得分: {result.final_score}")
+                if paper_name:
+                    print(f"论文题目: {paper_name}")
+                print(f"初始得分(score_obtained之和): {result.plugin_metadata.get('initial_score', 0)}")
+                print(f"冲突扣分: {result.plugin_metadata.get('conflict_penalty', 0)}")
+                print(f"最终得分(100分制): {result.final_score}")
                 print(f"评审结论: {result.verdict}")
+                if incomplete_note:
+                    print(f"  {incomplete_note}")
                 print(f"是否需要人工复核: {result.needs_human_review}")
                 if result.human_review_reason:
                     print(f"复核原因: {result.human_review_reason}")
                 markdown_path = result.plugin_metadata.get("markdown_report_path")
                 if markdown_path:
                     print(f"Markdown报告: {markdown_path}")
+
+            print(f"\n处理完成: 已评估{processed_count}篇, 跳过{skipped_count}篇")
 
         except Exception as e:
             logger.error(f"从数据库读取处理失败: {e}", exc_info=True)
@@ -424,7 +706,7 @@ async def main():
     parser.add_argument(
         "--paper-id",
         type=str,
-        help="指定论文ID（仅在database模式下有效）"
+        help="指定论文ID（仅在database模式下有效，指定后强制评估，即使4个审计组不全）"
     )
     parser.add_argument(
         "--prompts-dir",
@@ -442,6 +724,11 @@ async def main():
         action="store_true",
         help="启用纯LLM-as-a-Judge模式（始终调用DeepSeek API进行裁决，即使无冲突）"
     )
+    parser.add_argument(
+        "--no-hallucination-filter",
+        action="store_true",
+        help="禁用幻觉过滤（证据验证），计算final_score时不纳入证据验证调整"
+    )
 
     args = parser.parse_args()
 
@@ -452,7 +739,7 @@ async def main():
             print("反思评估组 - 主运行程序")
             print("="*60)
             print("\n请选择运行方案:")
-            print("1. 从PostgreSQL数据库读取 (agent_audits表)")
+            print("1. 从PostgreSQL数据库读取 (agent_audit_result表)")
             print("2. 从prompts文件夹读取JSON文件")
             print("0. 退出")
 
@@ -460,13 +747,13 @@ async def main():
 
             if choice == "1":
                 # 创建database模式的编排器
-                orchestrator = ReflectionOrchestrator(mode="database", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm)
+                orchestrator = ReflectionOrchestrator(mode="database", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm, enable_hallucination_filter=not args.no_hallucination_filter)
                 orchestrator.initialize_modules()
                 paper_id = input("请输入论文ID (留空处理所有论文): ").strip() or None
                 await orchestrator.run_from_database(paper_id)
             elif choice == "2":
                 # 创建file模式的编排器
-                orchestrator = ReflectionOrchestrator(mode="file", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm)
+                orchestrator = ReflectionOrchestrator(mode="file", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm, enable_hallucination_filter=not args.no_hallucination_filter)
                 orchestrator.initialize_modules()
                 prompts_dir = input(f"请输入JSON文件目录 (默认: prompts): ").strip() or "prompts"
                 await orchestrator.run_from_files(prompts_dir)
@@ -477,13 +764,13 @@ async def main():
 
         elif args.mode == "database":
             # 创建database模式的编排器
-            orchestrator = ReflectionOrchestrator(mode="database", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm)
+            orchestrator = ReflectionOrchestrator(mode="database", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm, enable_hallucination_filter=not args.no_hallucination_filter)
             orchestrator.initialize_modules()
             await orchestrator.run_from_database(args.paper_id)
 
         elif args.mode == "file":
             # 创建file模式的编排器
-            orchestrator = ReflectionOrchestrator(mode="file", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm)
+            orchestrator = ReflectionOrchestrator(mode="file", enable_dialogue=args.enable_dialogue, always_use_llm=args.always_use_llm, enable_hallucination_filter=not args.no_hallucination_filter)
             orchestrator.initialize_modules()
             await orchestrator.run_from_files(args.prompts_dir)
 

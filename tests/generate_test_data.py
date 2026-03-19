@@ -1,10 +1,17 @@
 """
 测试数据生成器
-模拟5个审计组对论文的评审结果
+模拟4个审计组对论文的评审结果
 支持两种模式：
 1. file模式：生成JSON文件到prompts目录
-2. database模式：插入数据到PostgreSQL的agent_audits表
+2. database模式：插入数据到PostgreSQL的agent_audit_result表
+
+Week3更新：
+- 审计组从5个改为4个（FMT/REF/EXP/LOG，去掉代码审计）
+- 数据库表从agent_audits改为agent_audit_result
+- 使用真实的rule_id和规则名称
+- result_json格式匹配新的agent_audit_result表结构
 """
+import hashlib
 import json
 import random
 import uuid
@@ -26,22 +33,47 @@ logger = logging.getLogger(__name__)
 class TestDataGenerator:
     """测试数据生成器"""
 
-    # 5个审计组的配置
-    AUDIT_GROUPS = {
-        2: "格式审计组",
-        3: "逻辑审计组",
-        4: "代码审计组",
-        5: "实验数据组",
-        6: "文献真实性组"
+    # 4个审计组配置（agent_code -> 中文名）
+    AUDIT_AGENTS = {
+        "FMT": "格式审计智能体",
+        "REF": "文献审计智能体",
+        "EXP": "实验数据智能体",
+        "LOG": "逻辑审计智能体",
     }
 
-    # 审核点示例
-    AUDIT_POINTS = {
-        2: ["标题层级规范", "图表位置", "公式对齐", "参考文献格式", "页边距设置"],
-        3: ["摘要与结论一致性", "论证逻辑严密性", "章节衔接", "研究问题明确性", "方法论合理性"],
-        4: ["代码规范性", "算法实现正确性", "代码与描述一致性", "README完整性", "依赖管理"],
-        5: ["统计学显著性检验", "样本量充足性", "数据分布合理性", "图表数据一致性", "实验可重复性"],
-        6: ["参考文献真实性", "引用格式规范", "文献年份合理性", "作者信息完整性", "DOI有效性"]
+    # 每个agent_code对应的规则（rule_id -> rule_name_cn, full_score, severity）
+    AGENT_RULES = {
+        "FMT": [
+            {"rule_id": "FMT-001", "name": "论文总字数达标", "full_score": 7, "severity": "CRITICAL"},
+            {"rule_id": "FMT-002", "name": "核心章节字数占比达标", "full_score": 6, "severity": "CRITICAL"},
+            {"rule_id": "FMT-003", "name": "排版自闭环规范", "full_score": 3, "severity": "WARNING"},
+            {"rule_id": "FMT-004", "name": "图表公式引用/格式规范", "full_score": 4, "severity": "WARNING"},
+        ],
+        "REF": [
+            {"rule_id": "REF-001", "name": "参考文献总数达标", "full_score": 6, "severity": "CRITICAL"},
+            {"rule_id": "REF-002", "name": "近3年文献占比达标", "full_score": 5, "severity": "CRITICAL"},
+            {"rule_id": "REF-003", "name": "选题贴合领域热点/难点", "full_score": 5, "severity": "CRITICAL"},
+            {"rule_id": "REF-004", "name": "英文/CCF文献占比达标", "full_score": 4, "severity": "WARNING"},
+        ],
+        "EXP": [
+            {"rule_id": "EXP-001", "name": "必须报告显著性P值", "full_score": 6, "severity": "CRITICAL"},
+            {"rule_id": "EXP-002", "name": "多组比较需要检验方法", "full_score": 4, "severity": "CRITICAL"},
+            {"rule_id": "EXP-003", "name": "小样本需正态性检验", "full_score": 3, "severity": "WARNING"},
+            {"rule_id": "EXP-004", "name": "均值必须配STD/SEM", "full_score": 3, "severity": "CRITICAL"},
+            {"rule_id": "EXP-005", "name": "图表应包含误差棒", "full_score": 3, "severity": "WARNING"},
+            {"rule_id": "EXP-006", "name": "正文与图表数值一致", "full_score": 4, "severity": "CRITICAL"},
+            {"rule_id": "EXP-007", "name": "至少对比2种近3年SOTA基线", "full_score": 4, "severity": "CRITICAL"},
+            {"rule_id": "EXP-008", "name": "训练测试严格分离", "full_score": 3, "severity": "CRITICAL"},
+        ],
+        "LOG": [
+            {"rule_id": "LOG-001", "name": "摘要五段式结构完整", "full_score": 5, "severity": "CRITICAL"},
+            {"rule_id": "LOG-002", "name": "全文三级逻辑闭环", "full_score": 6, "severity": "CRITICAL"},
+            {"rule_id": "LOG-003", "name": "软件架构UML视图达标", "full_score": 5, "severity": "CRITICAL"},
+            {"rule_id": "LOG-004", "name": "全文核心术语一致性", "full_score": 4, "severity": "CRITICAL"},
+            {"rule_id": "LOG-005", "name": "相关技术章节闭环衔接", "full_score": 3, "severity": "WARNING"},
+            {"rule_id": "LOG-006", "name": "实验分析回应研究问题", "full_score": 3, "severity": "CRITICAL"},
+            {"rule_id": "LOG-007", "name": "创新点数量达标", "full_score": 4, "severity": "CRITICAL"},
+        ],
     }
 
     # 问题描述模板
@@ -63,118 +95,111 @@ class TestDataGenerator:
         ]
     }
 
-    # 建议模板
     SUGGESTIONS = {
-        "Critical": [
-            "必须立即修正{}",
-            "强烈建议重新审查{}",
-            "需要彻底修改{}"
-        ],
-        "Warning": [
-            "建议补充{}",
-            "建议优化{}",
-            "建议完善{}"
-        ],
-        "Info": [
-            "可以进一步提升{}",
-            "保持当前水平",
-            "继续保持"
-        ]
+        "Critical": ["必须立即修正{}", "强烈建议重新审查{}", "需要彻底修改{}"],
+        "Warning": ["建议补充{}", "建议优化{}", "建议完善{}"],
+        "Info": ["可以进一步提升{}", "保持当前水平", "继续保持"]
     }
 
     @staticmethod
     def generate_audit_result(
         paper_id: str,
-        group_id: int,
-        num_items: int = 3
+        agent_code: str,
+        paper_name: str = "测试论文"
     ) -> Dict[str, Any]:
         """
-        生成单个审计组的结果
+        生成单个审计组的结果（符合agent_audit_result.result_json格式）
 
         Args:
             paper_id: 论文ID
-            group_id: 审计组ID (2-6)
-            num_items: 生成的审核项数量
+            agent_code: 审计组编码（FMT/REF/EXP/LOG）
+            paper_name: 论文题目
 
         Returns:
-            审计结果JSON
+            包含result_json和行级字段的审计结果
         """
-        audit_results = []
+        rules = TestDataGenerator.AGENT_RULES[agent_code]
+        audit_items = []
 
-        for i in range(num_items):
-            # 随机选择问题级别
-            level = random.choices(
-                ["Critical", "Warning", "Info"],
-                weights=[0.1, 0.3, 0.6]  # Critical少，Info多
-            )[0]
+        for rule in rules:
+            # 随机决定是否合规
+            is_compliant = random.choices([1, 0], weights=[0.6, 0.4])[0]
 
-            # 根据级别确定分数范围
-            if level == "Critical":
-                score = random.randint(40, 60)
-            elif level == "Warning":
-                score = random.randint(60, 80)
+            if is_compliant:
+                level = "Info"
+                score = rule["full_score"]
             else:
-                score = random.randint(80, 95)
+                level = "Critical" if rule["severity"] == "CRITICAL" else "Warning"
+                # 不合规时扣分
+                score = random.randint(0, rule["full_score"] - 1)
 
-            # 选择审核点
-            point = random.choice(TestDataGenerator.AUDIT_POINTS[group_id])
-
-            # 生成描述和建议
             desc_template = random.choice(TestDataGenerator.DESCRIPTIONS[level])
             sugg_template = random.choice(TestDataGenerator.SUGGESTIONS[level])
+            description = desc_template.format(rule["name"])
+            suggestion = sugg_template.format(rule["name"])
 
-            description = desc_template.format(point)
-            suggestion = sugg_template.format(point)
+            section = f"{random.randint(1, 8)}.{random.randint(1, 5)}"
+            evidence_quote = f"原文第{section}节提到：'{rule['name']}相关内容...'"
 
-            # 生成证据引用
-            evidence_quote = f"原文第{random.randint(1, 10)}.{random.randint(1, 5)}节提到：'{point}相关内容...'"
+            # result_id必须<=32字符，paper_id可能是UUID(36字符)
+            # 固定部分: "RES-" + agent_code(3) + "-" + "-" + rule_num(3) = 12字符
+            # paper_id部分最多20字符
+            pid_short = paper_id if len(paper_id) <= 20 else hashlib.md5(paper_id.encode()).hexdigest()[:8]
+            result_id = f"RES-{agent_code}-{pid_short}-{rule['rule_id'].split('-')[1]}"
 
-            audit_results.append({
-                "id": f"item-{group_id}-{i+1:03d}",
-                "point": point,
+            audit_items.append({
+                "result_id": result_id,
+                "paper_id": paper_id,
+                "point": rule["name"],
+                "rule_id": rule["rule_id"],
                 "score": score,
                 "level": level,
                 "description": description,
                 "evidence_quote": evidence_quote,
-                "location": {
-                    "section": f"{random.randint(1, 10)}.{random.randint(1, 5)}",
-                    "line_start": random.randint(1, 500)
-                },
-                "suggestion": suggestion
+                "location": {"section": section, "line_start": random.randint(1, 500)},
+                "suggestion": suggestion,
+                "is_compliant": is_compliant,
+                "actual_value": str(random.randint(1, 100)),
             })
 
+        # 构建result_json（符合work_week3格式）
+        result_json = {
+            "agent_code": agent_code,
+            "audit_results": audit_items
+        }
+
         return {
-            "group_id": group_id,
-            "group_name": TestDataGenerator.AUDIT_GROUPS[group_id],
+            "agent_code": agent_code,
             "paper_id": paper_id,
-            "audit_results": audit_results,
-            "timestamp": datetime.now().isoformat()
+            "paper_name": paper_name,
+            "result_json": result_json,
+            "audit_items": audit_items,  # 行级数据
         }
 
     @staticmethod
     def generate_paper_audits(
         paper_id: Optional[str] = None,
-        num_items_per_group: int = 3
+        paper_name: str = "测试论文"
     ) -> List[Dict[str, Any]]:
         """
-        生成一篇论文的5个审计组结果
+        生成一篇论文的4个审计组结果
 
         Args:
             paper_id: 论文ID，如果为None则自动生成
-            num_items_per_group: 每个审计组生成的审核项数量
+            paper_name: 论文题目
 
         Returns:
-            5个审计组的结果列表
+            4个审计组的结果列表
         """
         if paper_id is None:
-            paper_id = f"paper_{uuid.uuid4().hex[:8]}"
+            paper_id = f"P{random.randint(100, 999)}"
 
         results = []
-        for group_id in TestDataGenerator.AUDIT_GROUPS.keys():
+        for agent_code in TestDataGenerator.AUDIT_AGENTS.keys():
             result = TestDataGenerator.generate_audit_result(
                 paper_id=paper_id,
-                group_id=group_id,
-                num_items=num_items_per_group
+                agent_code=agent_code,
+                paper_name=paper_name
             )
             results.append(result)
 
@@ -185,128 +210,80 @@ class TestDataGenerator:
         paper_audits: List[Dict[str, Any]],
         output_dir: str = "prompts"
     ):
-        """
-        将审计结果保存为JSON文件
-
-        Args:
-            paper_audits: 审计结果列表
-            output_dir: 输出目录
-        """
+        """将审计结果保存为JSON文件"""
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
         paper_id = paper_audits[0]["paper_id"]
 
         for audit in paper_audits:
-            group_id = audit["group_id"]
-            filename = f"{paper_id}_group_{group_id}.json"
+            agent_code = audit["agent_code"]
+            filename = f"{paper_id}_{agent_code}.json"
             filepath = output_path / filename
 
             with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(audit, f, ensure_ascii=False, indent=2)
+                json.dump(audit["result_json"], f, ensure_ascii=False, indent=2)
 
             print(f"已生成: {filepath}")
 
     @staticmethod
     async def save_to_database(
         paper_audits: List[Dict[str, Any]],
-        db_manager: DatabaseManager,
-        task_id: Optional[str] = None
+        db_manager: DatabaseManager
     ):
         """
-        将审计结果保存到PostgreSQL数据库
+        将审计结果保存到PostgreSQL的agent_audit_result表
 
-        数据库表结构：agent_audits
-        - id: 自增主键（SERIAL类型，由数据库自动生成）
-        - task_id: UUID类型（必填）
-        - paper_id: UUID类型（必填）
-        - agent_name: 文本类型（必填）
-        - agent_version: 文本类型（必填）
-        - status: 枚举类型（PENDING/RUNNING/SUCCESS/FAILED/TIMEOUT），默认PENDING
-        - 可选字段：chunk_id, score, audit_level, result_json, error_msg,
-                   usage_tokens, latency_ms, created_at, updated_at
-
-        注意：需要数据库用户有USAGE权限访问agent_audits_id_seq序列
+        每条规则对应一行记录，result_json存储该agent_code的完整审计结果。
 
         Args:
-            paper_audits: 审计结果列表
+            paper_audits: 审计结果列表（4个审计组）
             db_manager: 数据库管理器实例
-            task_id: 任务ID（UUID格式），如果为None则自动生成
         """
-        paper_id_str = paper_audits[0]["paper_id"]
-
-        # 将paper_id转换为UUID格式（如果不是UUID格式）
-        try:
-            # 尝试解析为UUID
-            paper_id_uuid = uuid.UUID(paper_id_str)
-            paper_id = str(paper_id_uuid)
-        except (ValueError, AttributeError):
-            # 如果不是有效的UUID，生成一个新的UUID
-            # 但保留原始paper_id在result_json中
-            paper_id = str(uuid.uuid4())
-            logger.warning(f"paper_id '{paper_id_str}' 不是有效的UUID格式，已生成新UUID: {paper_id}")
-
-        if task_id is None:
-            # 生成标准UUID格式（基础task_id）
-            base_task_id = str(uuid.uuid4())
-        else:
-            base_task_id = task_id
+        paper_id = paper_audits[0]["paper_id"]
+        paper_name = paper_audits[0].get("paper_name", "测试论文")
 
         try:
             async with db_manager.acquire() as conn:
                 for audit in paper_audits:
-                    group_id = audit["group_id"]
-                    group_name = audit["group_name"]
+                    agent_code = audit["agent_code"]
+                    result_json = audit["result_json"]
+                    audit_items = audit["audit_items"]
 
-                    # 为每个审计组生成唯一的task_id（避免unique_task_per_paper约束冲突）
-                    unique_task_id = str(uuid.uuid4())
+                    for item in audit_items:
+                        result_id = item["result_id"]
+                        rule_id = item["rule_id"]
+                        is_compliant = item.get("is_compliant", 0)
+                        actual_value = item.get("actual_value", "")
+                        score_obtained = item.get("score", 0)
+                        audit_suggestion = item.get("suggestion", "")
 
-                    # 计算平均分数
-                    audit_results = audit.get("audit_results", [])
-                    avg_score = sum(item["score"] for item in audit_results) / len(audit_results) if audit_results else 0
+                        query = """
+                            INSERT INTO agent_audit_result (
+                                result_id, paper_id, paper_name,
+                                agent_code, rule_id,
+                                is_compliant, actual_value, score_obtained,
+                                audit_suggestion, audit_time, result_json
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10::jsonb)
+                        """
 
-                    # 确定审核级别（根据最严重的问题）
-                    levels = [item["level"] for item in audit_results]
-                    if "Critical" in levels:
-                        audit_level = "Critical"
-                    elif "Warning" in levels:
-                        audit_level = "Warning"
-                    else:
-                        audit_level = "Info"
-
-                    # 生成唯一的整数ID（绕过序列权限问题）
-                    # 使用时间戳+随机数确保唯一性
-                    import time
-                    record_id = int(time.time() * 1000000) + random.randint(0, 999999)
-
-                    # 插入数据库（手动指定id以绕过序列权限问题）
-                    query = """
-                        INSERT INTO agent_audits (
-                            id, task_id, paper_id, chunk_id, agent_name, agent_version,
-                            status, score, audit_level, result_json, error_msg,
-                            usage_tokens, latency_ms, created_at, updated_at
+                        await conn.execute(
+                            query,
+                            result_id,
+                            paper_id,
+                            paper_name,
+                            agent_code,
+                            rule_id,
+                            is_compliant,
+                            actual_value,
+                            score_obtained,
+                            audit_suggestion,
+                            json.dumps(result_json, ensure_ascii=False),
                         )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
-                    """
 
-                    await conn.execute(
-                        query,
-                        record_id,                              # id (手动生成)
-                        unique_task_id,                         # task_id (每个审计组唯一)
-                        paper_id,                               # paper_id (必填)
-                        None,                                   # chunk_id (可选)
-                        group_name,                             # agent_name (必填，使用组名)
-                        "1.0.0",                                # agent_version (必填)
-                        "PENDING",                              # status (枚举类型，默认PENDING)
-                        round(avg_score, 2),                    # score
-                        audit_level,                            # audit_level
-                        json.dumps(audit, ensure_ascii=False),  # result_json
-                        None,                                   # error_msg
-                        0,                                      # usage_tokens
-                        0                                       # latency_ms
-                    )
-
-                    print(f"已插入数据库: {paper_id}, {group_name} (group_{group_id}), 平均分: {avg_score:.2f}")
+                    total_score = sum(i["score"] for i in audit_items)
+                    print(f"已插入: {paper_id}, {agent_code} ({len(audit_items)}条规则, 总分={total_score})")
 
         except Exception as e:
             print(f"数据库插入失败: {e}")
@@ -317,34 +294,29 @@ class TestDataGenerator:
         num_papers: int = 3,
         output_dir: str = "prompts"
     ):
-        """
-        生成多篇论文的测试数据（文件模式）
-
-        Args:
-            num_papers: 论文数量
-            output_dir: 输出目录
-        """
+        """生成多篇论文的测试数据（文件模式）"""
         print(f"开始生成{num_papers}篇论文的测试数据...")
 
         for i in range(num_papers):
-            paper_id = f"test_paper_{i+1:03d}"
-            print(f"\n生成论文 {i+1}/{num_papers}: {paper_id}")
+            paper_id = f"P{i+1:03d}"
+            paper_name = f"基于深度学习的软件缺陷预测方法研究_{i+1}"
+            print(f"\n生成论文 {i+1}/{num_papers}: {paper_id} - {paper_name}")
 
             paper_audits = TestDataGenerator.generate_paper_audits(
                 paper_id=paper_id,
-                num_items_per_group=random.randint(2, 5)
+                paper_name=paper_name
             )
-
             TestDataGenerator.save_to_files(paper_audits, output_dir)
 
-        print(f"\n完成！共生成{num_papers}篇论文，每篇5个审计组结果")
+        print(f"\n完成！共生成{num_papers}篇论文，每篇4个审计组结果")
         print(f"文件保存在: {output_dir}/")
 
     @staticmethod
     async def generate_multiple_papers_to_db(
         num_papers: int = 3,
         db_manager: DatabaseManager = None,
-        use_existing_papers: bool = False
+        use_existing_papers: bool = False,
+        paper_id: Optional[str] = None
     ):
         """
         生成多篇论文的测试数据（数据库模式）
@@ -352,81 +324,66 @@ class TestDataGenerator:
         Args:
             num_papers: 论文数量
             db_manager: 数据库管理器实例
-            use_existing_papers: 是否使用数据库中已存在的paper_id（默认False，生成新的）
+            use_existing_papers: 是否使用数据库中已存在的paper_id
+            paper_id: 指定论文ID，指定后只为该paper_id生成测试数据
         """
         if db_manager is None:
             db_manager = DatabaseManager()
 
         await db_manager.connect()
 
-        print(f"开始生成{num_papers}篇论文的测试数据并插入数据库...")
-
         try:
-            # 如果使用已存在的paper_id，先从papers表查询
+            # 如果指定了paper_id，只为该paper_id生成数据
+            if paper_id:
+                print(f"为指定论文生成测试数据: {paper_id}")
+                paper_name = f"测试论文_{paper_id[:8]}"
+                paper_audits = TestDataGenerator.generate_paper_audits(
+                    paper_id=paper_id,
+                    paper_name=paper_name
+                )
+                await TestDataGenerator.save_to_database(paper_audits, db_manager)
+                print(f"\n完成！已为论文{paper_id}生成4个审计组结果")
+                print(f"数据已插入到agent_audit_result表")
+                return
+
+            print(f"开始生成{num_papers}篇论文的测试数据并插入数据库...")
+
+            existing_paper_ids = []
             if use_existing_papers:
                 async with db_manager.acquire() as conn:
-                    # 尝试不同的列名（paper_id或id）
                     try:
-                        query = "SELECT paper_id FROM papers LIMIT $1"
+                        query = "SELECT DISTINCT paper_id FROM agent_audit_result LIMIT $1"
                         rows = await conn.fetch(query, num_papers)
                         existing_paper_ids = [str(row["paper_id"]) for row in rows]
                     except Exception:
-                        # 如果paper_id列不存在，尝试id列
                         try:
-                            query = "SELECT id FROM papers LIMIT $1"
+                            query = "SELECT paper_id FROM papers LIMIT $1"
                             rows = await conn.fetch(query, num_papers)
-                            existing_paper_ids = [str(row["id"]) for row in rows]
+                            existing_paper_ids = [str(row["paper_id"]) for row in rows]
                         except Exception as e:
-                            print(f"错误：无法从papers表读取数据: {e}")
-                            print("将尝试创建新的paper记录")
-                            existing_paper_ids = []
+                            print(f"无法从数据库读取已有paper_id: {e}")
 
-                    if existing_paper_ids and len(existing_paper_ids) < num_papers:
-                        print(f"警告：papers表中只有{len(existing_paper_ids)}篇论文，将只生成{len(existing_paper_ids)}篇的审计数据")
-                        num_papers = len(existing_paper_ids)
-            else:
-                existing_paper_ids = []
+                if existing_paper_ids and len(existing_paper_ids) < num_papers:
+                    print(f"数据库中只有{len(existing_paper_ids)}篇论文，将只生成{len(existing_paper_ids)}篇")
+                    num_papers = len(existing_paper_ids)
 
             for i in range(num_papers):
-                # 使用已存在的paper_id或生成新的UUID
                 if use_existing_papers and i < len(existing_paper_ids):
                     paper_id = existing_paper_ids[i]
-                    print(f"\n生成论文 {i+1}/{num_papers}: 使用已存在的paper_id")
                 else:
-                    # 不创建新paper记录，直接使用已存在的paper_id
-                    # 因为papers表结构未知，且可能没有插入权限
-                    print(f"\n生成论文 {i+1}/{num_papers}: 使用已存在的paper_id")
-                    try:
-                        async with db_manager.acquire() as conn:
-                            # 尝试使用paper_id列名
-                            query = "SELECT paper_id FROM papers LIMIT 1 OFFSET $1"
-                            row = await conn.fetchrow(query, i)
-                            if row:
-                                paper_id = str(row["paper_id"])
-                                print(f"  从papers表获取: {paper_id}")
-                            else:
-                                # 如果没有足够的paper记录，生成UUID但警告用户
-                                paper_id = str(uuid.uuid4())
-                                print(f"  警告：papers表中没有足够的记录，生成新UUID: {paper_id}")
-                                print(f"  注意：此UUID可能不满足外键约束，插入可能失败")
-                    except Exception as e:
-                        print(f"  错误：无法从papers表读取数据: {e}")
-                        print(f"  跳过此论文")
-                        continue
+                    paper_id = f"P{i+1:03d}"
 
-                task_id = str(uuid.uuid4())
-                print(f"  paper_id (UUID): {paper_id}")
-                print(f"  task_id (UUID): {task_id}")
+                paper_name = f"基于深度学习的软件缺陷预测方法研究_{i+1}"
+                print(f"\n生成论文 {i+1}/{num_papers}: {paper_id}")
 
                 paper_audits = TestDataGenerator.generate_paper_audits(
-                    paper_id=paper_id,  # 使用UUID格式
-                    num_items_per_group=random.randint(2, 5)
+                    paper_id=paper_id,
+                    paper_name=paper_name
                 )
+                await TestDataGenerator.save_to_database(paper_audits, db_manager)
 
-                await TestDataGenerator.save_to_database(paper_audits, db_manager, task_id)
-
-            print(f"\n完成！共生成{num_papers}篇论文，每篇5个审计组结果")
-            print(f"数据已插入到agent_audits表")
+            print(f"\n完成！共生成{num_papers}篇论文，每篇4个审计组结果")
+            print(f"数据已插入到agent_audit_result表")
 
         finally:
             await db_manager.disconnect()
@@ -438,44 +395,38 @@ def main():
 
     parser = argparse.ArgumentParser(description="测试数据生成器")
     parser.add_argument(
-        "--mode",
-        type=str,
-        choices=["file", "database"],
-        default="file",
+        "--mode", type=str, choices=["file", "database"], default="file",
         help="生成模式：file=生成JSON文件，database=插入数据库"
     )
     parser.add_argument(
-        "--num-papers",
-        type=int,
-        default=3,
-        help="生成的论文数量"
+        "--num-papers", type=int, default=3, help="生成的论文数量"
     )
     parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="prompts",
+        "--output-dir", type=str, default="prompts",
         help="输出目录（仅file模式有效）"
     )
     parser.add_argument(
-        "--use-existing-papers",
-        action="store_true",
+        "--use-existing-papers", action="store_true",
         help="使用数据库中已存在的paper_id（仅database模式有效）"
+    )
+    parser.add_argument(
+        "--paper-id", type=str, default=None,
+        help="指定论文ID（仅database模式有效，指定后只为该paper_id生成测试数据）"
     )
 
     args = parser.parse_args()
 
     if args.mode == "file":
-        # 文件模式：生成JSON文件
         TestDataGenerator.generate_multiple_papers(
             num_papers=args.num_papers,
             output_dir=args.output_dir
         )
     elif args.mode == "database":
-        # 数据库模式：插入到PostgreSQL
         asyncio.run(
             TestDataGenerator.generate_multiple_papers_to_db(
                 num_papers=args.num_papers,
-                use_existing_papers=args.use_existing_papers
+                use_existing_papers=args.use_existing_papers,
+                paper_id=args.paper_id
             )
         )
 

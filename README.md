@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-本项目是反思评估组的完整实现，整合了四位成员的工作成果，实现了完整的论文评审反思评估系统。系统支持从数据库或文件读取5个审计组的评审结果，通过冲突裁决、幻觉过滤、重复过滤、优先级排序等模块，生成最终的评审报告和导师指导意见。
+本项目是反思评估组的完整实现，整合了四位成员的工作成果，实现了完整的论文评审反思评估系统。系统从数据库`agent_audit_result`表读取4个审计组（FMT格式审计/REF文献审计/EXP实验数据/LOG逻辑审计）的评审结果，从`main_rules`和`rule_judge`表读取评审规则，通过冲突裁决、幻觉过滤、重复过滤、优先级排序等模块，生成最终的评审报告和导师指导意见，并将结果保存到`reflect_agent_verdict`表。同时支持从文件读取JSON格式的审计结果。
 
 This is the work of the reflection and evaluation team for our school's project, evaluation indicators for the quality of master's degree theses in software engineering.
 
@@ -46,14 +46,21 @@ ls results/result_*.json
 1. **冲突裁决 (Conflict Resolution)**
    - 检测分数差异、语义冲突、级别冲突
    - 使用DeepSeek API进行智能裁决
-   - 加权投票机制（逻辑组1.2、代码组1.1、实验组1.1、文献组1.0、格式组0.8）
+   - 加权投票机制（LOG:1.2、EXP:1.1、REF:1.0、FMT:0.8）
    - 自动补全截断的JSON响应
 
 2. **幻觉过滤 (Hallucination Filtering)**
    - 证据真实性验证：检查evidence_quote是否在原文中存在
+   - 利用paper_sections表的location字段进行章节级验证
    - 强制证据关联：Warning/Critical级别问题必须包含有效证据
    - 自动剔除无效证据
    - 基于证据验证分数调整最终评分
+
+3. **规则驱动评审 (Rule-Based Evaluation)**
+   - 从数据库`main_rules`和`rule_judge`表动态读取评审规则
+   - 支持22条规则（FMT:4条、REF:4条、EXP:8条、LOG:7条）
+   - 规则类型：QUANTITATIVE（定量）和BOOLEAN（布尔）
+   - 违规等级：CRITICAL和WARNING
 
 3. **重复过滤 (Deduplication)**
    - 使用Sentence-Transformers或TF-IDF进行文本向量化
@@ -66,9 +73,10 @@ ls results/result_*.json
    - 问题分级：Critical、Major、Minor
 
 5. **整体评分 (Overall Scoring)**
-   - 加权平均分计算
-   - 证据验证分数调整
-   - 级别分布统计
+   - `initial_score`：各审计agent所有rule的`score_obtained`之和
+   - `conflict_penalty`：冲突裁决扣分（Critical: -5分/个, Warning: -2分/个）
+   - `final_score`：归一化到100分制后，扣除冲突惩罚和证据验证调整
+   - 证据验证调整：`validation_score < 0.7`时扣分（最多-14分），`> 0.9`时加分（最多+1分）
    - 最终结论生成（Accept/Minor Revision/Major Revision）
 
 6. **导师对话生成 (Mentor Dialogue)**
@@ -102,22 +110,40 @@ python run.py --mode file --prompts-dir prompts --enable-dialogue
 python run.py --mode file --prompts-dir prompts --always-use-llm
 ```
 
-**输入**: `prompts/` 文件夹中的JSON文件（每篇论文需要5个审计组的结果）
+**输入**: `prompts/` 文件夹中的JSON文件（每篇论文需要4个审计组的结果：FMT/REF/EXP/LOG）
 **输出**:
 - `results/result_{paper_id}.json` - JSON格式结果
 - `reports/review_report_{paper_id}_{timestamp}.md` - Markdown报告
 
 ### 模式2: 从数据库读取
 ```bash
-# 智能混合裁决模式（默认）
-python run.py --mode database --paper-id paper_001
+# 自动模式：处理所有4个审计组齐全、所有规则已应用且未评估/需重新评估的论文
+python run.py --mode database
+
+# 指定论文ID（强制评估，即使审计组不全）
+python run.py --mode database --paper-id P001
 
 # 纯LLM-as-a-Judge模式
-python run.py --mode database --paper-id paper_001 --always-use-llm
+python run.py --mode database --paper-id P001 --always-use-llm
+
+# 禁用幻觉过滤（证据验证）
+python run.py --mode database --paper-id P001 --always-use-llm --no-hallucination-filter
 ```
 
-**输入**: PostgreSQL数据库中的`agent_audits`表
-**输出**: 保存到`agent_audits`表 + Markdown报告
+**输入**: PostgreSQL数据库中的`agent_audit_result`表 + `main_rules`/`rule_judge`规则表
+**输出**: 保存到`reflect_agent_verdict`表 + Markdown报告
+
+**自动模式逻辑**：
+- 检查`agent_audit_result`表中同一`paper_id`是否同时有FMT/REF/EXP/LOG四个审计组的结果
+- 检查每个agent是否已应用其在`main_rules`表中定义的所有规则（规则完整性检查）
+- 按`(paper_id, rule_id)`去重，保留`audit_time`最新的记录
+- 若该`paper_id`未被反思评估过，自动执行反思评估
+- 若该`paper_id`的审计结果有更新（`audit_time`在先前`verdict_time`之后），重新评估
+- 若审计组不全或规则未全部应用，跳过（除非指定`--paper-id`强制评估）
+
+**强制模式**（指定`--paper-id`）：
+- 忽略审计组不全的限制，但在终端输出警告
+- 在`final_verdict`字段中说明审计组不全的情况
 
 ### 模式3: 交互式模式
 ```bash
@@ -126,7 +152,30 @@ python run.py --mode interactive
 
 ## 数据格式
 
-### 输入格式 (审计结果)
+### 数据库输入格式（agent_audit_result表的result_json字段）
+```json
+{
+  "agent_code": "EXP",
+  "audit_results": [
+    {
+      "result_id": "item-001",
+      "paper_id": "paper-001",
+      "point": "统计学显著性检验",
+      "rule_id": "EXP-006",
+      "score": 3,
+      "level": "Warning",
+      "description": "实验三数据分布不均，未进行正态性检验。",
+      "evidence_quote": "原文第4.2节提到：'我们直接采用了T检验...'",
+      "location": {"section": "4.2", "line_start": 45},
+      "suggestion": "建议补充Shapiro-Wilk检验。"
+    }
+  ]
+}
+```
+
+**agent_code**: FMT(格式审计)/REF(文献审计)/EXP(实验数据)/LOG(逻辑审计)
+
+### 文件输入格式（兼容旧格式）
 ```json
 {
   "group_id": 6,
@@ -182,12 +231,12 @@ python run.py --mode interactive
 
 ```
 project/
-├── run.py                          # 主运行程序 ⭐
+├── run.py                          # 主运行程序
 ├── requirements.txt                # 依赖列表
 ├── .env                            # API密钥配置（需自行创建）
 ├── src/
 │   ├── db/                         # 统一数据库模块
-│   │   └── database.py             # PostgreSQL连接管理
+│   │   └── database.py             # PostgreSQL连接管理（agent_audit_result/reflect_agent_verdict/main_rules/rule_judge）
 │   ├── api/                        # 统一API模块
 │   │   └── deepseek_client.py      # DeepSeek API客户端（自动加载.env）
 │   ├── common/                     # 公共模块
@@ -207,16 +256,11 @@ project/
 ├── config/
 │   └── rule_config.json            # 规则配置文件
 ├── prompts/                        # JSON输入文件目录
-│   ├── test_paper_001_group_2.json
-│   ├── test_paper_001_group_3.json
-│   └── ...
 ├── results/                        # JSON结果输出目录
-│   └── result_test_paper_001.json
-├── reports/                        # Markdown报告输出目录 📄
-│   └── review_report_test_paper_001_20260306_223332.md
+├── reports/                        # Markdown报告输出目录
 └── docs/                           # 文档目录
-    ├── work_week2.txt              # 数据格式说明
-    ├── group_recommendations.txt   # 功能需求说明
+    ├── work_week3.md               # Week3任务说明
+    ├── rule for database.md        # 数据库规则说明
     └── group_seperate_work.txt     # 模块分工说明
 ```
 
@@ -248,13 +292,22 @@ export DEEPSEEK_API_KEY="your_api_key_here"
 
 系统会自动加载 `.env` 文件中的API密钥。
 
-### 数据库配置（可选）
+### 数据库配置
 如果使用数据库模式，需要配置PostgreSQL连接：
 - 主机: 10.13.1.26
 - 端口: 5432
 - 用户名: admin
 - 密码: ABCabc@123
 - 数据库: postgres
+
+**涉及的数据库表**：
+| 表名 | 用途 |
+|:---|:---|
+| `main_rules` | 评审规则总表（22条规则） |
+| `rule_judge` | 规则判定属性表（阈值、运算符等） |
+| `agent_audit_result` | 4个审计组的审计结果（输入） |
+| `paper_sections` | 论文章节内容（用于幻觉过滤） |
+| `reflect_agent_verdict` | 反思评估结果（输出） |
 
 ## 输出说明
 
@@ -294,7 +347,7 @@ export DEEPSEEK_API_KEY="your_api_key_here"
 
 1. **快速路径（无冲突）**
    - 条件：分数差异<20分，无级别冲突，无语义矛盾
-   - 处理：加权平均计算（逻辑组1.2、代码组1.1、实验组1.1、文献组1.0、格式组0.8）
+   - 处理：加权平均计算（LOG:1.2、EXP:1.1、REF:1.0、FMT:0.8）
    - 响应时间：<1秒
    - API成本：0
 
@@ -352,7 +405,8 @@ python run.py --mode database --paper-id xxx
 - 验证所有evidence_quote是否在原文中存在
 - Warning/Critical级别问题必须包含有效证据
 - 自动剔除无证据或证据无效的问题
-- 基于证据验证分数调整最终评分（<0.7扣分，>0.9加分）
+- 基于证据验证分数调整最终评分（`<0.7`扣分最多14分，`>0.9`加分最多1分）
+- 可通过`--no-hallucination-filter`参数禁用
 
 ### 4. 智能冲突裁决
 - 多维度冲突检测：分数差异、语义冲突、级别冲突
@@ -404,7 +458,7 @@ python tests/generate_test_data.py --mode database --num-papers 1 --use-existing
 **工作流程**：
 1. **规则引擎预筛选**：检测明显冲突（分数差异≥20分、级别冲突、语义矛盾）
 2. **LLM裁决**：只对检测到的冲突调用DeepSeek API进行深度分析
-3. **无冲突场景**：如果5个审计组结果一致性高，直接计算加权平均分
+3. **无冲突场景**：如果4个审计组结果一致性高，直接计算加权平均分
 
 **为什么这样设计**：
 - ✅ **成本优化**：避免不必要的API调用（每次调用约1500 tokens）
@@ -446,8 +500,8 @@ python run.py --mode file --prompts-dir prompts
 
 ## 文档
 
-- [数据格式说明](docs/work_week2.txt) - 接口规范
-- [功能需求说明](docs/group_recommendations.txt) - 各组任务
+- [Week3任务说明](docs/work_week3.md) - 数据库表结构与代码修改说明
+- [数据库规则说明](docs/rule%20for%20database.md) - 评审规则详细清单
 - [模块分工说明](docs/group_seperate_work.txt) - 技术实现
 
 ## 许可证
@@ -456,11 +510,37 @@ python run.py --mode file --prompts-dir prompts
 
 ---
 
-**最后更新**: 2026-03-07
-**版本**: v1.2
-**状态**: ✅ 所有核心功能已实现并测试通过
+**最后更新**: 2026-03-19
+**版本**: v1.4
+**状态**: 所有核心功能已实现并测试通过
 
 ## 更新日志
+
+### v1.4 (2026-03-19)
+- 修复`initial_score`/`conflict_penalty`/`final_score`计算逻辑：
+  - `initial_score` = 各审计agent所有rule的`score_obtained`之和
+  - `conflict_penalty` = 冲突裁决扣分（Critical: -5, Warning: -2）
+  - `final_score` = 归一化100分制 - conflict_penalty - 证据验证调整
+- 修复`filtered_suggestions`和`prioritized_suggestions`输出：
+  - `filtered_suggestions`：去重后的全部审计建议（含冲突裁决 + 不合规审计记录）
+  - `prioritized_suggestions`：仅保留critical和warning级别，按优先级排序
+- 新增`--no-hallucination-filter`命令行参数，可禁用幻觉过滤（证据验证）
+- 提高幻觉过滤权重（`validation_score < 0.7`时最多扣14分）
+- 数据库模式自动模式下新增规则完整性检查（检查每个agent是否已应用所有规则）
+- 审计结果按`(paper_id, rule_id)`去重，保留`audit_time`最新的记录
+- `save_verdict`改为UPSERT，支持重复评估同一论文
+- 修复`conflict_resolver.py`中数据库连接管理（由`run.py`统一管理，避免连接池被提前关闭）
+- 修复`evidence.py`中`from .utils import cosine_sim`引用错误
+
+### v1.3 (2026-03-19)
+- 输入表从`agent_audits`改为`agent_audit_result`（新表结构含`result_json`字段）
+- 输出表从`agent_audits`改为`reflect_agent_verdict`（含`initial_score`/`conflict_penalty`/`final_score`等字段）
+- 新增从`main_rules`和`rule_judge`表读取评审规则（不再硬编码）
+- 新增自动检查4个审计组（FMT/REF/EXP/LOG）是否齐全
+- 新增自动检查是否已评估/需要重新评估（基于时间戳比较）
+- `--paper-id`参数支持强制评估（即使审计组不全，终端提醒并在`final_verdict`中说明）
+- 冲突裁决模块支持新的`agent_code`（FMT/REF/EXP/LOG）权重配置
+- 兼容旧格式（`group_id` + `audit_results`）和新格式（`agent_code` + `audit_results`）
 
 ### v1.2 (2026-03-07)
 - ✅ 添加可配置的`always_use_llm`选项（方案3实现）

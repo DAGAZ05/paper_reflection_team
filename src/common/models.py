@@ -28,7 +28,12 @@ class ConflictType(str, Enum):
 
 
 class AgentType(str, Enum):
-    """Agent类型"""
+    """Agent类型（对应agent_code）"""
+    FMT = "FMT"       # 格式审计
+    REF = "REF"       # 文献审计
+    EXP = "EXP"       # 实验数据
+    LOG = "LOG"       # 逻辑审计
+    # 兼容旧值
     FORMAT = "format"
     LOGIC = "logic"
     CODE = "code"

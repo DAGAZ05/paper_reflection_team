@@ -25,21 +25,29 @@ LEVEL_PRIORITY = {"Info": 0, "Warning": 1, "Critical": 2}
 
 
 class ConflictResolver:
-    def __init__(self, mode: str = "database", always_use_llm: Optional[bool] = None):
+    def __init__(self, mode: str = "database", always_use_llm: Optional[bool] = None,
+                 enable_hallucination_filter: bool = True):
         # 使用统一的DeepSeek客户端和数据库管理器
         self.llm_client = deepseek_client
         self.db_client = db_manager
         # 从配置或参数获取always_use_llm设置
         self.always_use_llm = always_use_llm if always_use_llm is not None else settings.conflict_resolution.always_use_llm
         self.mode = mode  # "database" or "file"
+        self.enable_hallucination_filter = enable_hallucination_filter  # 是否启用幻觉过滤
         self.conflict_patterns = self._load_conflict_patterns()
         # 审计组权重配置（根据重要性调整）
+        # 使用agent_code作为key，同时保留中文名兼容
         self.agent_weights = {
+            "LOG": 1.2,
+            "EXP": 1.1,
+            "REF": 1.0,
+            "FMT": 0.8,
+            # 兼容旧中文名
             "逻辑审计组": 1.2,
             "代码审计组": 1.1,
             "实验数据组": 1.1,
             "文献真实性组": 1.0,
-            "格式审计组": 0.8
+            "格式审计组": 0.8,
         }
         # 证据验证权重（验证分数对最终评分的影响）
         self.evidence_validation_weight = 0.1
@@ -91,9 +99,10 @@ class ConflictResolver:
             except json.JSONDecodeError as exc:
                 raise ValueError(f"agent_results JSON字符串解析失败: {exc.msg}") from exc
 
-        # 检查是否为新格式（包含group_id和audit_results）
-        if isinstance(parsed, dict) and "group_id" in parsed and "audit_results" in parsed:
-            return self._convert_new_format_to_old(parsed)
+        # 检查是否为新格式（包含group_id/agent_code和audit_results）
+        if isinstance(parsed, dict) and "audit_results" in parsed:
+            if "group_id" in parsed or "agent_code" in parsed:
+                return self._convert_new_format_to_old(parsed)
 
         if isinstance(parsed, dict):
             if "agent_results" in parsed:
@@ -117,7 +126,7 @@ class ConflictResolver:
                 continue
 
             # Compat for list input where each element is new-format payload.
-            if "group_id" in item and "audit_results" in item:
+            if ("group_id" in item or "agent_code" in item) and "audit_results" in item:
                 normalized.extend(self._convert_new_format_to_old(item))
                 continue
 
@@ -229,12 +238,28 @@ class ConflictResolver:
         }
 
     def _convert_new_format_to_old(self, new_format_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """将新格式（group_id + audit_results）转换为旧格式"""
+        """将新格式转换为旧格式
+
+        支持两种新格式：
+        1. week2格式：group_id + audit_results
+        2. week3格式（agent_audit_result.result_json）：agent_code + audit_results
+        """
         normalized = []
+
+        # week3格式：使用agent_code
+        agent_code = new_format_data.get("agent_code", "")
         group_id = new_format_data.get("group_id", 0)
         audit_results = new_format_data.get("audit_results", [])
 
-        # 组名映射
+        # agent_code到名称的映射
+        agent_code_name_map = {
+            "FMT": "格式审计组",
+            "REF": "文献审计组",
+            "EXP": "实验数据组",
+            "LOG": "逻辑审计组",
+        }
+
+        # 组名映射（兼容旧格式）
         group_name_map = {
             2: "格式审计组",
             3: "逻辑审计组",
@@ -243,7 +268,10 @@ class ConflictResolver:
             6: "文献真实性组"
         }
 
-        group_name = group_name_map.get(group_id, f"Group_{group_id}")
+        if agent_code:
+            group_name = agent_code_name_map.get(agent_code, agent_code)
+        else:
+            group_name = group_name_map.get(group_id, f"Group_{group_id}")
 
         for idx, audit_item in enumerate(audit_results):
             if not isinstance(audit_item, dict):
@@ -254,14 +282,15 @@ class ConflictResolver:
             level = audit_item.get("level", "Info")
             comment = audit_item.get("description", "")
             point = audit_item.get("point", "")
+            rule_id = audit_item.get("rule_id", "")
 
             # 合并comment和point
             full_comment = f"{point}: {comment}" if point else comment
 
             normalized.append({
-                "request_id": f"req_{group_id}_{idx}",
+                "request_id": audit_item.get("result_id", f"req_{agent_code or group_id}_{idx}"),
                 "agent_info": {
-                    "name": group_name,
+                    "name": agent_code or group_name,
                     "version": "v1.0"
                 },
                 "result": {
@@ -273,7 +302,8 @@ class ConflictResolver:
                     "point": point,
                     "description": comment,
                     "evidence_quote": audit_item.get("evidence_quote", ""),
-                    "location": audit_item.get("location", {})
+                    "location": audit_item.get("location", {}),
+                    "rule_id": rule_id,
                 },
                 "usage": {
                     "tokens": 0,
@@ -281,7 +311,7 @@ class ConflictResolver:
                 }
             })
 
-        logger.info(f"转换新格式数据: group_id={group_id}, 转换了{len(normalized)}条结果")
+        logger.info(f"转换新格式数据: agent_code={agent_code or group_id}, 转换了{len(normalized)}条结果")
         return normalized
 
     def validate_evidence_quotes(self, agent_results: List[Dict[str, Any]], paper_content: str) -> Dict[str, Any]:
@@ -1094,16 +1124,21 @@ class ConflictResolver:
                 except Exception as e:
                     logger.warning(f"获取论文内容失败: {e}")
 
-            # 幻觉过滤：验证evidence_quote
-            evidence_validation = self.validate_evidence_quotes(agent_results, paper_context)
+            # 幻觉过滤：验证evidence_quote（仅在启用时执行）
+            if self.enable_hallucination_filter:
+                evidence_validation = self.validate_evidence_quotes(agent_results, paper_context)
 
-            # ?????Warning/Critical ???????????????
-            enforcement = self.enforce_evidence_linking(
-                agent_results,
-                evidence_validation,
-                paper_context_available=bool(paper_context),
-            )
-            agent_results = enforcement["filtered_agent_results"]
+                # 对Warning/Critical级别的无证据结果进行过滤
+                enforcement = self.enforce_evidence_linking(
+                    agent_results,
+                    evidence_validation,
+                    paper_context_available=bool(paper_context),
+                )
+                agent_results = enforcement["filtered_agent_results"]
+            else:
+                logger.info("幻觉过滤已禁用，跳过证据验证和证据链接强制")
+                evidence_validation = {"valid_count": 0, "invalid_count": 0, "invalid_results": [], "validation_score": 1.0, "message": "幻觉过滤已禁用"}
+                enforcement = {"filtered_agent_results": agent_results, "removed_results": [], "removed_count": 0, "original_count": len(agent_results), "remaining_count": len(agent_results), "paper_context_available": bool(paper_context)}
 
             if not agent_results:
                 result_data = {
@@ -1206,9 +1241,9 @@ class ConflictResolver:
             logger.error("冲突裁决失败: %s", exc, exc_info=True)
             raise HTTPException(status_code=500, detail=f"内部服务错误: {exc}") from exc
         finally:
-            # 仅在database模式下断开数据库连接
-            if self.mode == "database":
-                await self.db_client.disconnect()
+            # 注意：当由run.py调用时，数据库连接由run.py统一管理，不在此处断开
+            # 仅在独立运行（如FastAPI端点）且自行建立了连接时才断开
+            pass
 
 
 resolver = ConflictResolver()
