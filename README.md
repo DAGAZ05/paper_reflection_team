@@ -259,9 +259,7 @@ project/
 ├── results/                        # JSON结果输出目录
 ├── reports/                        # Markdown报告输出目录
 └── docs/                           # 文档目录
-    ├── work_week3.md               # Week3任务说明
-    ├── rule for database.md        # 数据库规则说明
-    └── group_seperate_work.txt     # 模块分工说明
+    └── ...                         # 各类过程及总结文档
 ```
 
 ## 技术栈
